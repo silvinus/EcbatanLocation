@@ -1,0 +1,80 @@
+@rendermode InteractiveServer
+@inject ThemeService Theme
+@implements IDisposable
+
+<div class="theme-switcher">
+    <button class="btn theme-toggle" @onclick="ToggleMode" title="@(Theme.CurrentMode == "dark" ? "Mode clair" : "Mode sombre")">
+        @if (Theme.CurrentMode == "dark")
+        {
+            <span>☀️</span>
+        }
+        else
+        {
+            <span>🌙</span>
+        }
+    </button>
+
+    <div class="theme-dropdown-wrap">
+        <button class="btn theme-dropdown-btn" @onclick="ToggleDropdown" @onclick:stopPropagation="true">
+            <span class="theme-preview-dot" style="background: @CurrentPreview"></span>
+            <span>@CurrentLabel</span>
+            <span class="caret">▾</span>
+        </button>
+
+        @if (_open)
+        {
+            <div class="theme-dropdown-backdrop" @onclick="CloseDropdown"></div>
+            <div class="theme-dropdown">
+                @foreach (var (id, label, preview) in ThemeService.Themes)
+                {
+                    <button class="theme-option @(Theme.CurrentTheme == id ? "active" : "")"
+                            @onclick="() => SelectTheme(id)">
+                        <span class="theme-preview-dot" style="background: @preview"></span>
+                        <span>@label</span>
+                        @if (Theme.CurrentTheme == id)
+                        {
+                            <span class="check">✓</span>
+                        }
+                    </button>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _open;
+
+    private string CurrentLabel => ThemeService.Themes.FirstOrDefault(t => t.Id == Theme.CurrentTheme).Label ?? "Océan";
+    private string CurrentPreview => ThemeService.Themes.FirstOrDefault(t => t.Id == Theme.CurrentTheme).Preview ?? "#6ea8ff";
+
+    private bool _initialized;
+
+    protected override void OnInitialized()
+    {
+        Theme.OnChange += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            await Theme.InitializeAsync();
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleDropdown() => _open = !_open;
+    private void CloseDropdown() => _open = false;
+
+    private async Task ToggleMode() => await Theme.ToggleModeAsync();
+
+    private async Task SelectTheme(string id)
+    {
+        await Theme.SetThemeAsync(id);
+        _open = false;
+    }
+
+    public void Dispose() => Theme.OnChange -= StateHasChanged;
+}

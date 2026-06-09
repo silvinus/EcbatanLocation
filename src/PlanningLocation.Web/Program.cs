@@ -11,6 +11,7 @@ using PlanningLocation.Infrastructure.Persistence;
 using PlanningLocation.Web.Behaviors;
 using PlanningLocation.Web.Components;
 using PlanningLocation.Web.Components.Account;
+using PlanningLocation.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+builder.Services.AddScoped<ThemeService>();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));

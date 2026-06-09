@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["themes.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
     <link rel="stylesheet" href="@Assets["PlanningLocation.Web.styles.css"]" />
     <ImportMap />
@@ -15,6 +16,15 @@
 <body>
     <Routes />
     <ReconnectModal />
+    <script src="@Assets["js/theme.js"]"></script>
+    <script>
+        (function() {
+            var t = localStorage.getItem('app-theme') || 'ocean';
+            var m = localStorage.getItem('app-mode') || 'dark';
+            document.documentElement.setAttribute('data-theme', t);
+            document.documentElement.setAttribute('data-mode', m);
+        })();
+    </script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
 </body>
 
