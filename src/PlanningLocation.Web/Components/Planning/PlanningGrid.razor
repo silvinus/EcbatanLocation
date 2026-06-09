@@ -1,0 +1,98 @@
+@{
+    var daysInMonth = DateTime.DaysInMonth(Year, Month);
+    var today = DateOnly.FromDateTime(DateTime.Today);
+}
+
+<table aria-label="planning">
+    <thead>
+        <tr>
+            <th class="studio-col">Studio</th>
+            @for (int d = 1; d <= daysInMonth; d++)
+            {
+                var date = new DateOnly(Year, Month, d);
+                var isToday = date == today;
+                var isSelected = date == SelectedDate;
+                var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                var dayNum = d;
+                <th class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "")">
+                    <span class="day-header @(isToday ? "today" : "") @(isWeekend ? "weekend" : "")"
+                          @onclick="() => OnDayClicked(date)">
+                        @dayNum
+                    </span>
+                </th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var studioPlan in Planning.Studios)
+        {
+            <tr>
+                <td class="studio-col">
+                    <div class="studio-name">@studioPlan.Studio.Name</div>
+                    <div class="studio-meta">
+                        @if (studioPlan.Studio.HasKitchen) { <span>Cuisine</span> }
+                        else { <span>Sans cuisine</span> }
+                        &bull; @studioPlan.Studio.Capacity pl.
+                        @if (!studioPlan.Studio.RentableAlone) { <span>&bull; <b>Non louable seul</b></span> }
+                    </div>
+                </td>
+                @for (int d = 1; d <= daysInMonth; d++)
+                {
+                    var date = new DateOnly(Year, Month, d);
+                    var isToday = date == today;
+                    var isSelected = date == SelectedDate;
+                    var dayReservations = GetReservationsForDay(studioPlan.Reservations, date);
+                    <td class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "")">
+                        <div class="cell">
+                            @foreach (var res in dayReservations)
+                            {
+                                if (IsInRange(res, date))
+                                {
+                                    <ReservationCell Reservation="@res"
+                                                     OnClick="() => OnReservationClick(res.Id)" />
+                                }
+                            }
+                        </div>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired] public PlanningMensuelDto Planning { get; set; } = default!;
+    [Parameter] public int Year { get; set; }
+    [Parameter] public int Month { get; set; }
+    [Parameter] public DateOnly? SelectedDate { get; set; }
+    [Parameter] public EventCallback<DateOnly> OnDaySelected { get; set; }
+    [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
+
+    private List<ReservationPlanningDto> GetReservationsForDay(
+        IReadOnlyList<ReservationPlanningDto> reservations, DateOnly date)
+    {
+        return reservations
+            .Where(r => r.StartDate <= date && r.EndDate > date)
+            .ToList();
+    }
+
+    private bool IsInRange(ReservationPlanningDto reservation, DateOnly date)
+    {
+        var moreThanStart = date >= reservation.StartDate;
+        var lessThanEnd = date <= reservation.EndDate;
+        var isInRange = moreThanStart && lessThanEnd;
+        return isInRange;
+        // var monthStart = new DateOnly(Year, Month, 1);
+        // return reservation.StartDate == date || (reservation.StartDate < monthStart && date == monthStart);
+    }
+
+    private async Task OnDayClicked(DateOnly date)
+    {
+        await OnDaySelected.InvokeAsync(date);
+    }
+
+    private async Task OnReservationClick(Guid id)
+    {
+        await OnReservationClicked.InvokeAsync(id);
+    }
+}

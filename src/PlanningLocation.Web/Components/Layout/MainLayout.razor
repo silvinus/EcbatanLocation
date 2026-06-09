@@ -1,9 +1,46 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
 
-@Body
+<div class="wrap">
+    <header>
+        <div class="title">
+            <h1>Planning de location</h1>
+            <AuthorizeView>
+                <Authorized>
+                    <p>Mode propriétaire — @context.User.Identity?.Name</p>
+                </Authorized>
+                <NotAuthorized>
+                    <p>Vue mensuelle - lecture publique</p>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+        <div class="top-actions">
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/admin" class="btn">Administration</a>
+                    <span class="pill pill-auth">Connecté</span>
+                    <button class="btn" @onclick="Logout">Déconnexion</button>
+                </Authorized>
+                <NotAuthorized>
+                    <span class="pill">Mode : <b>Public (lecture seule)</b></span>
+                    <a href="/login" class="btn primary">Se connecter</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </header>
+
+    @Body
+</div>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+    <span class="dismiss">&#x1F5D9;</span>
 </div>
+
+@code {
+    private void Logout()
+    {
+        NavigationManager.NavigateTo("/api/auth/logout", forceLoad: true);
+    }
+}

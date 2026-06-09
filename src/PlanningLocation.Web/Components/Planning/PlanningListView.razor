@@ -1,0 +1,64 @@
+@{
+    var allReservations = Planning.Studios
+        .SelectMany(s => s.Reservations.Select(r => (Studio: s.Studio, Reservation: r)))
+        .OrderBy(x => x.Reservation.StartDate)
+        .ThenBy(x => x.Studio.Name)
+        .ToList();
+}
+
+@if (allReservations.Count == 0)
+{
+    <div class="hint" style="padding:20px;text-align:center">
+        Aucune réservation pour cette période.
+    </div>
+}
+else
+{
+    <div class="list-view">
+        @foreach (var item in allReservations)
+        {
+            var res = item.Reservation;
+            var statusClass = res.Status switch
+            {
+                ReservationStatus.Pending => "st-pending",
+                ReservationStatus.Accepted => "st-accepted",
+                ReservationStatus.Confirmed => "st-confirmed",
+                _ => ""
+            };
+            var statusLabel = res.Status switch
+            {
+                ReservationStatus.Pending => "Demande",
+                ReservationStatus.Accepted => "Acceptée",
+                ReservationStatus.Confirmed => "Confirmée",
+                _ => ""
+            };
+            var nights = res.EndDate.DayNumber - res.StartDate.DayNumber;
+
+            <div class="list-item booking @statusClass" @onclick="() => OnClick(res.Id)">
+                <div class="list-item-main">
+                    <div class="list-item-title">
+                        <span class="who">@res.TenantName</span>
+                        <span class="badge @statusClass">@statusLabel</span>
+                    </div>
+                    <div class="list-item-details">
+                        <span>@item.Studio.Name</span>
+                        <span>&bull;</span>
+                        <span>@res.StartDate.ToString("dd/MM") → @res.EndDate.ToString("dd/MM")</span>
+                        <span>&bull;</span>
+                        <span>@nights nuit(s)</span>
+                        <span>&bull;</span>
+                        <span>@res.AdultCount ad. @res.ChildrenUnder3Count enf.</span>
+                    </div>
+                    <div class="owner">@res.OwnerName</div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public PlanningMensuelDto Planning { get; set; } = default!;
+    [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
+
+    private async Task OnClick(Guid id) => await OnReservationClicked.InvokeAsync(id);
+}

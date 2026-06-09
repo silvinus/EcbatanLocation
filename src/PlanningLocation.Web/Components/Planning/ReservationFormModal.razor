@@ -1,0 +1,345 @@
+@inject IMediator Mediator
+
+<div class="modal-overlay" @onclick="OnCancel">
+    <div class="modal-content modal-wide" @onclick:stopPropagation="true">
+        <div class="modal-hd">
+            <h3>@(IsEdit ? "Modifier la réservation" : "Nouvelle réservation")</h3>
+            <button class="x" @onclick="OnCancel">Fermer</button>
+        </div>
+        <div class="modal-bd">
+            @if (_errorMessage is not null)
+            {
+                <div class="alert-error">@_errorMessage</div>
+            }
+
+            @if (_overlapWarning)
+            {
+                <div class="alert-error">
+                    ⚠ Ce studio est déjà réservé sur ces dates. Veuillez choisir un autre créneau.
+                </div>
+            }
+
+            <div class="grid">
+                <div class="field">
+                    <label>Studio</label>
+                    <select value="@_studioId" @onchange="OnStudioChanged">
+                        <option value="">-- Choisir un studio --</option>
+                        @foreach (var s in Studios)
+                        {
+                            <option value="@s.Id">@s.Name (@s.Capacity pers.@(s.HasKitchen ? ", cuisine" : "")@(!s.RentableAlone ? ", non louable seul" : ""))</option>
+                        }
+                    </select>
+                    @if (!string.IsNullOrEmpty(_studioId) && _selectedStudio is not null && !_selectedStudio.RentableAlone)
+                    {
+                        <div class="field-hint warn">Ce studio ne peut être loué qu'avec un studio indépendant sur les mêmes dates.</div>
+                    }
+                </div>
+
+                <div class="row">
+                    <div class="field">
+                        <label>Date d'arrivée</label>
+                        <input type="date" value="@_startDate.ToString("yyyy-MM-dd")"
+                               @onchange="OnStartDateChanged" />
+                    </div>
+                    <div class="field">
+                        <label>Date de départ</label>
+                        <input type="date" value="@_endDate.ToString("yyyy-MM-dd")"
+                               @onchange="OnEndDateChanged" />
+                    </div>
+                </div>
+
+                @if (_startDate < _endDate)
+                {
+                    <div class="hint">@NightCount nuit(s)</div>
+                }
+                @if (_startDate >= _endDate)
+                {
+                    <div class="field-hint warn">La date de départ doit être après la date d'arrivée.</div>
+                }
+
+                <div class="field">
+                    <label>Nom du locataire</label>
+                    <input @bind="_tenantName" placeholder="Nom complet du locataire" />
+                </div>
+
+                <div class="row">
+                    <div class="field">
+                        <label>Adultes</label>
+                        <input type="number" value="@_adultCount" min="1"
+                               @onchange="OnAdultCountChanged" />
+                    </div>
+                    <div class="field">
+                        <label>Enfants &lt; 3 ans</label>
+                        <input type="number" value="@_childrenCount" min="0"
+                               @onchange="OnChildrenCountChanged" />
+                    </div>
+                </div>
+
+                @if (_selectedStudio is not null && TotalPersons > _selectedStudio.Capacity)
+                {
+                    <div class="field-hint warn">
+                        Capacité dépassée : @TotalPersons personne(s) pour @_selectedStudio.Capacity place(s) max.
+                    </div>
+                }
+
+                <div class="field">
+                    <label>Type de client</label>
+                    <select value="@_clientType" @onchange="OnClientTypeChanged">
+                        <option value="@ClientType.Owner">Propriétaire</option>
+                        <option value="@ClientType.GuestWithPresence">Invité avec présence</option>
+                        <option value="@ClientType.Acquaintance">Connaissance</option>
+                        <option value="@ClientType.MobileHome">Mobil-home</option>
+                        <option value="@ClientType.Tent">Tente</option>
+                    </select>
+                </div>
+
+                @if (_estimatedAmount.HasValue)
+                {
+                    <div class="estimation">
+                        <span class="label">Montant estimé</span>
+                        <span class="amount">@_estimatedAmount.Value.ToString("N2") €</span>
+                    </div>
+                }
+
+                @if (_checkingOverlap)
+                {
+                    <div class="hint">Vérification de la disponibilité…</div>
+                }
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn" @onclick="OnCancel">Annuler</button>
+                <button class="btn primary" @onclick="Save" disabled="@(_saving || _overlapWarning)">
+                    @(_saving ? "Enregistrement..." : "Enregistrer")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<StudioDto> Studios { get; set; } = [];
+    [Parameter, EditorRequired] public Guid CurrentOwnerId { get; set; }
+    [Parameter] public ReservationDetailDto? EditReservation { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool IsEdit => EditReservation is not null;
+
+    private string _studioId = "";
+    private DateOnly _startDate = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly _endDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
+    private string _tenantName = "";
+    private int _adultCount = 1;
+    private int _childrenCount;
+    private ClientType _clientType = ClientType.Owner;
+    private decimal? _estimatedAmount;
+    private string? _errorMessage;
+    private bool _saving;
+    private bool _overlapWarning;
+    private bool _checkingOverlap;
+    private StudioDto? _selectedStudio;
+
+    private int NightCount => _endDate.DayNumber - _startDate.DayNumber;
+    private int TotalPersons => _adultCount + _childrenCount;
+
+    private CancellationTokenSource? _overlapCts;
+
+    protected override void OnParametersSet()
+    {
+        if (EditReservation is not null)
+        {
+            _studioId = EditReservation.Studio.Id.ToString();
+            _startDate = EditReservation.StartDate;
+            _endDate = EditReservation.EndDate;
+            _tenantName = EditReservation.TenantName;
+            _adultCount = EditReservation.AdultCount;
+            _childrenCount = EditReservation.ChildrenUnder3Count;
+            _clientType = EditReservation.ClientType;
+            _estimatedAmount = EditReservation.EstimatedAmount;
+            _selectedStudio = Studios.FirstOrDefault(s => s.Id == EditReservation.Studio.Id);
+        }
+    }
+
+    private async Task OnStudioChanged(ChangeEventArgs e)
+    {
+        _studioId = e.Value?.ToString() ?? "";
+        _selectedStudio = Guid.TryParse(_studioId, out var sid)
+            ? Studios.FirstOrDefault(s => s.Id == sid)
+            : null;
+        await RefreshEstimateAndOverlap();
+    }
+
+    private async Task OnStartDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var d))
+            _startDate = d;
+        await RefreshEstimateAndOverlap();
+    }
+
+    private async Task OnEndDateChanged(ChangeEventArgs e)
+    {
+        if (DateOnly.TryParse(e.Value?.ToString(), out var d))
+            _endDate = d;
+        await RefreshEstimateAndOverlap();
+    }
+
+    private async Task OnAdultCountChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n))
+            _adultCount = n;
+        await EstimateAmount();
+    }
+
+    private async Task OnChildrenCountChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n))
+            _childrenCount = n;
+        await EstimateAmount();
+    }
+
+    private async Task OnClientTypeChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<ClientType>(e.Value?.ToString(), out var ct))
+            _clientType = ct;
+        await EstimateAmount();
+    }
+
+    private async Task RefreshEstimateAndOverlap()
+    {
+        await Task.WhenAll(EstimateAmount(), CheckOverlap());
+    }
+
+    private async Task EstimateAmount()
+    {
+        if (_startDate >= _endDate || _adultCount < 1)
+        {
+            _estimatedAmount = null;
+            return;
+        }
+
+        try
+        {
+            _estimatedAmount = await Mediator.Send(
+                new PlanningLocation.Application.Queries.EstimateAmount.EstimateAmountQuery(
+                    _startDate, _endDate, _adultCount, _childrenCount, _clientType));
+        }
+        catch
+        {
+            _estimatedAmount = null;
+        }
+    }
+
+    private async Task CheckOverlap()
+    {
+        _overlapCts?.Cancel();
+        _overlapCts = new CancellationTokenSource();
+        var token = _overlapCts.Token;
+
+        if (!Guid.TryParse(_studioId, out var studioId) || studioId == Guid.Empty
+            || _startDate >= _endDate)
+        {
+            _overlapWarning = false;
+            return;
+        }
+
+        _checkingOverlap = true;
+        StateHasChanged();
+
+        try
+        {
+            await Task.Delay(300, token);
+
+            var hasOverlap = await Mediator.Send(
+                new PlanningLocation.Application.Queries.CheckOverlap.CheckOverlapQuery(
+                    studioId, _startDate, _endDate,
+                    IsEdit ? EditReservation!.Id : null),
+                token);
+
+            _overlapWarning = hasOverlap;
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            _overlapWarning = false;
+        }
+        finally
+        {
+            _checkingOverlap = false;
+        }
+    }
+
+    private async Task Save()
+    {
+        _errorMessage = null;
+        _saving = true;
+
+        try
+        {
+            if (!Guid.TryParse(_studioId, out var studioId) || studioId == Guid.Empty)
+            {
+                _errorMessage = "Veuillez sélectionner un studio.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_tenantName))
+            {
+                _errorMessage = "Veuillez saisir le nom du locataire.";
+                return;
+            }
+
+            if (_startDate >= _endDate)
+            {
+                _errorMessage = "La date de fin doit être après la date de début.";
+                return;
+            }
+
+            if (_adultCount < 1)
+            {
+                _errorMessage = "Au moins 1 adulte est requis.";
+                return;
+            }
+
+            if (_overlapWarning)
+            {
+                _errorMessage = "Impossible d'enregistrer : le studio est déjà réservé sur ces dates.";
+                return;
+            }
+
+            if (IsEdit)
+            {
+                await Mediator.Send(new PlanningLocation.Application.Commands.UpdateReservation.UpdateReservationCommand(
+                    EditReservation!.Id, studioId, _startDate, _endDate,
+                    _tenantName.Trim(), _adultCount, _childrenCount, _clientType));
+            }
+            else
+            {
+                await Mediator.Send(new PlanningLocation.Application.Commands.CreateReservation.CreateReservationCommand(
+                    studioId, CurrentOwnerId, _startDate, _endDate,
+                    _tenantName.Trim(), _adultCount, _childrenCount, _clientType));
+            }
+
+            await OnSaved.InvokeAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _errorMessage = "Vous devez être connecté pour effectuer cette action.";
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _errorMessage = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

@@ -1,7 +1,335 @@
-﻿@page "/"
+@page "/"
+@inject IMediator Mediator
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Planning de location</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="layout">
+    <aside class="sidebar card">
+        <div class="hd">
+            <h2>Filtres & synthèse</h2>
+            <span class="pill mono">@Year-@Month.ToString("D2")</span>
+        </div>
+        <div class="bd grid">
+            <FiltersSummary Studios="@_studios"
+                            Owners="@_owners"
+                            Year="@Year"
+                            Month="@Month"
+                            SelectedStudioId="@SelectedStudioId"
+                            SelectedStatus="@SelectedStatus"
+                            SelectedOwnerId="@SelectedOwnerId"
+                            SelectedDate="@_selectedDate"
+                            Occupation="@_occupation"
+                            OnYearMonthChanged="OnYearMonthChanged"
+                            OnStudioChanged="OnStudioChanged"
+                            OnStatusChanged="OnStatusChanged"
+                            OnOwnerChanged="OnOwnerChanged" />
+        </div>
+    </aside>
 
-Welcome to your new app.
+    <main class="card">
+        <div class="hd">
+            <div class="month-nav">
+                <button class="btn-nav" @onclick="PreviousMonth">&lt;</button>
+                <span class="month-label">@GetMonthLabel()</span>
+                <button class="btn-nav" @onclick="NextMonth">&gt;</button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+                <div class="chips">
+                    <button class="chip @(_viewMode == ViewMode.Month ? "active" : "muted")" @onclick='() => _viewMode = ViewMode.Month'>Mois</button>
+                    <button class="chip @(_viewMode == ViewMode.Week ? "active" : "muted")" @onclick="SwitchToWeekView">Semaine</button>
+                    <button class="chip @(_viewMode == ViewMode.List ? "active" : "muted")" @onclick='() => _viewMode = ViewMode.List'>Liste</button>
+                </div>
+                <AuthorizeView>
+                    <Authorized>
+                        <button class="btn primary" @onclick="OpenCreateModal">+ Nouvelle réservation</button>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </div>
+        <div class="bd planning">
+            @if (_loading)
+            {
+                <div class="loading-indicator">Chargement du planning...</div>
+            }
+            else if (_planning is not null)
+            {
+                @if (_viewMode == ViewMode.Month)
+                {
+                    <PlanningGrid Planning="@_planning"
+                                  Year="@Year"
+                                  Month="@Month"
+                                  SelectedDate="@_selectedDate"
+                                  OnDaySelected="OnDaySelected"
+                                  OnReservationClicked="OnReservationClicked" />
+                }
+                else if (_viewMode == ViewMode.Week)
+                {
+                    <PlanningWeekView Planning="@_planning"
+                                      WeekStart="@_weekStart"
+                                      SelectedDate="@_selectedDate"
+                                      OnDaySelected="OnDaySelected"
+                                      OnReservationClicked="OnReservationClicked" />
+                }
+                else if (_viewMode == ViewMode.List)
+                {
+                    <PlanningListView Planning="@_planning"
+                                      OnReservationClicked="OnReservationClicked" />
+                }
+            }
+        </div>
+    </main>
+</div>
+
+@if (_selectedReservation is not null && !_showFormModal && !_showDeleteModal)
+{
+    <ReservationDetailModal Reservation="@_selectedReservation"
+                            IsAuthenticated="@_isAuthenticated"
+                            CurrentOwnerName="@_currentOwner?.Name"
+                            OnClose="CloseDetailModal"
+                            OnEdit="OpenEditModal"
+                            OnDelete="OpenDeleteModal"
+                            OnStatusChanged="OnReservationStatusChanged" />
+}
+
+@if (_showFormModal)
+{
+    <ReservationFormModal Studios="@(_studios ?? [])"
+                          CurrentOwnerId="@(_currentOwner?.Id ?? Guid.Empty)"
+                          EditReservation="@_editingReservation"
+                          OnSaved="OnFormSaved"
+                          OnCancel="CloseFormModal" />
+}
+
+@if (_showDeleteModal && _deletingReservation is not null)
+{
+    <DeleteConfirmModal Reservation="@_deletingReservation"
+                        OnDeleted="OnDeleted"
+                        OnCancel="CloseDeleteModal" />
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
+    private int Year { get; set; }
+    private int Month { get; set; }
+    private Guid? SelectedStudioId { get; set; }
+    private ReservationStatus? SelectedStatus { get; set; }
+    private Guid? SelectedOwnerId { get; set; }
+
+    private PlanningMensuelDto? _planning;
+    private IReadOnlyList<StudioDto>? _studios;
+    private IReadOnlyList<OwnerDto>? _owners;
+    private DateOnly? _selectedDate;
+    private OccupationJourDto? _occupation;
+    private ReservationDetailDto? _selectedReservation;
+
+    private bool _isAuthenticated;
+    private OwnerDto? _currentOwner;
+
+    private bool _showFormModal;
+    private ReservationDetailDto? _editingReservation;
+    private bool _showDeleteModal;
+    private ReservationDetailDto? _deletingReservation;
+    private bool _loading;
+    private ViewMode _viewMode = ViewMode.Month;
+    private DateOnly _weekStart;
+
+    private enum ViewMode { Month, Week, List }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        Year = today.Year;
+        Month = today.Month;
+        _selectedDate = today;
+
+        _studios = await Mediator.Send(new PlanningLocation.Application.Queries.GetStudios.GetStudiosQuery());
+        _owners = await Mediator.Send(new PlanningLocation.Application.Queries.GetOwners.GetOwnersQuery());
+
+        await ResolveCurrentOwner();
+        await LoadPlanning();
+        await LoadOccupation();
+    }
+
+    private async Task ResolveCurrentOwner()
+    {
+        if (AuthState is null) return;
+        var state = await AuthState;
+        _isAuthenticated = state.User.Identity?.IsAuthenticated == true;
+
+        if (_isAuthenticated)
+        {
+            var userId = state.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (userId is not null)
+            {
+                _currentOwner = await Mediator.Send(
+                    new PlanningLocation.Application.Queries.GetOwnerByUserId.GetOwnerByUserIdQuery(userId));
+            }
+        }
+    }
+
+    private async Task LoadPlanning()
+    {
+        _loading = true;
+        try
+        {
+            _planning = await Mediator.Send(
+                new PlanningLocation.Application.Queries.GetMonthlyPlanning.GetMonthlyPlanningQuery(
+                    Year, Month, SelectedStudioId, SelectedStatus, SelectedOwnerId));
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task LoadOccupation()
+    {
+        if (_selectedDate.HasValue)
+        {
+            _occupation = await Mediator.Send(
+                new PlanningLocation.Application.Queries.GetDailyOccupation.GetDailyOccupationQuery(_selectedDate.Value));
+        }
+    }
+
+    private async Task PreviousMonth()
+    {
+        if (Month == 1) { Month = 12; Year--; }
+        else { Month--; }
+        _selectedDate = null;
+        _occupation = null;
+        await LoadPlanning();
+    }
+
+    private async Task NextMonth()
+    {
+        if (Month == 12) { Month = 1; Year++; }
+        else { Month++; }
+        _selectedDate = null;
+        _occupation = null;
+        await LoadPlanning();
+    }
+
+    private async Task OnYearMonthChanged((int year, int month) value)
+    {
+        Year = value.year;
+        Month = value.month;
+        _selectedDate = null;
+        _occupation = null;
+        await LoadPlanning();
+    }
+
+    private async Task OnStudioChanged(Guid? studioId)
+    {
+        SelectedStudioId = studioId;
+        await LoadPlanning();
+    }
+
+    private async Task OnStatusChanged(ReservationStatus? status)
+    {
+        SelectedStatus = status;
+        await LoadPlanning();
+    }
+
+    private async Task OnOwnerChanged(Guid? ownerId)
+    {
+        SelectedOwnerId = ownerId;
+        await LoadPlanning();
+    }
+
+    private async Task OnDaySelected(DateOnly date)
+    {
+        _selectedDate = date;
+        await LoadOccupation();
+    }
+
+    private async Task OnReservationClicked(Guid reservationId)
+    {
+        _selectedReservation = await Mediator.Send(
+            new PlanningLocation.Application.Queries.GetReservationDetail.GetReservationDetailQuery(reservationId));
+    }
+
+    private void CloseDetailModal()
+    {
+        _selectedReservation = null;
+    }
+
+    private void OpenCreateModal()
+    {
+        _editingReservation = null;
+        _showFormModal = true;
+    }
+
+    private void OpenEditModal(ReservationDetailDto reservation)
+    {
+        _editingReservation = reservation;
+        _selectedReservation = null;
+        _showFormModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        _showFormModal = false;
+        _editingReservation = null;
+    }
+
+    private async Task OnFormSaved()
+    {
+        _showFormModal = false;
+        _editingReservation = null;
+        _selectedReservation = null;
+        await LoadPlanning();
+        if (_selectedDate.HasValue) await LoadOccupation();
+    }
+
+    private void OpenDeleteModal(ReservationDetailDto reservation)
+    {
+        _deletingReservation = reservation;
+        _selectedReservation = null;
+        _showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        _showDeleteModal = false;
+        _deletingReservation = null;
+    }
+
+    private async Task OnDeleted()
+    {
+        _showDeleteModal = false;
+        _deletingReservation = null;
+        _selectedReservation = null;
+        await LoadPlanning();
+        if (_selectedDate.HasValue) await LoadOccupation();
+    }
+
+    private async Task OnReservationStatusChanged()
+    {
+        if (_selectedReservation is not null)
+        {
+            _selectedReservation = await Mediator.Send(
+                new PlanningLocation.Application.Queries.GetReservationDetail.GetReservationDetailQuery(
+                    _selectedReservation.Id));
+        }
+        await LoadPlanning();
+    }
+
+    private void SwitchToWeekView()
+    {
+        _viewMode = ViewMode.Week;
+        var reference = _selectedDate ?? DateOnly.FromDateTime(DateTime.Today);
+        var dayOfWeek = ((int)reference.DayOfWeek + 6) % 7;
+        _weekStart = reference.AddDays(-dayOfWeek);
+    }
+
+    private string GetMonthLabel()
+    {
+        var date = new DateTime(Year, Month, 1);
+        var culture = new System.Globalization.CultureInfo("fr-FR");
+        return date.ToString("MMMM yyyy", culture);
+    }
+}

@@ -1,0 +1,231 @@
+<div class="modal-overlay" @onclick="OnClose">
+    <div class="modal-content" @onclick:stopPropagation="true">
+        <div class="modal-hd">
+            <h3>Détail réservation</h3>
+            <button class="x" @onclick="OnClose">Fermer</button>
+        </div>
+        <div class="modal-bd">
+            @if (_successMessage is not null)
+            {
+                <div class="alert-success">@_successMessage</div>
+            }
+            @if (_errorMessage is not null)
+            {
+                <div class="alert-error">@_errorMessage</div>
+            }
+
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="label">Studio</span>
+                    <span class="value">@Reservation.Studio.Name</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Propriétaire</span>
+                    <span class="value">@Reservation.Owner.Name</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Locataire</span>
+                    <span class="value">@Reservation.TenantName</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Type client</span>
+                    <span class="value">@GetClientTypeLabel()</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Du</span>
+                    <span class="value">@Reservation.StartDate.ToString("dd/MM/yyyy")</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Au</span>
+                    <span class="value">@Reservation.EndDate.ToString("dd/MM/yyyy")</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Durée</span>
+                    <span class="value">@Reservation.NumberOfDays nuit(s)</span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Personnes</span>
+                    <span class="value">@Reservation.AdultCount adulte(s), @Reservation.ChildrenUnder3Count enfant(s) &lt;3 ans</span>
+                </div>
+            </div>
+
+            <div class="sep"></div>
+
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <span class="label">Statut</span>
+                    <span class="value">
+                        <span class="badge @GetStatusBadgeClass()">@GetStatusLabel()</span>
+                    </span>
+                </div>
+                @if (Reservation.EstimatedAmount.HasValue)
+                {
+                    <div class="detail-item">
+                        <span class="label">Montant estimé</span>
+                        <span class="value">@Reservation.EstimatedAmount.Value.ToString("N2") €</span>
+                    </div>
+                }
+            </div>
+
+            @if (Reservation.AcceptedBy is not null)
+            {
+                <div class="sep"></div>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="label">Acceptée par</span>
+                        <span class="value">@Reservation.AcceptedBy</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Acceptée le</span>
+                        <span class="value">@Reservation.AcceptedAt?.ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                </div>
+            }
+
+            @if (Reservation.ConfirmedBy is not null)
+            {
+                <div class="detail-grid" style="margin-top:10px">
+                    <div class="detail-item">
+                        <span class="label">Confirmée par</span>
+                        <span class="value">@Reservation.ConfirmedBy</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Confirmée le</span>
+                        <span class="value">@Reservation.ConfirmedAt?.ToString("dd/MM/yyyy HH:mm")</span>
+                    </div>
+                </div>
+            }
+
+            <div class="sep"></div>
+            <div class="hint">
+                Créée le @Reservation.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                @if (Reservation.UpdatedAt.HasValue)
+                {
+                    <span> &bull; Modifiée le @Reservation.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                }
+            </div>
+
+            @if (IsAuthenticated)
+            {
+                <div class="sep"></div>
+                <div class="detail-actions">
+                    <button class="btn" @onclick="() => OnEdit.InvokeAsync(Reservation)">Modifier</button>
+
+                    @if (Reservation.Status == ReservationStatus.Pending)
+                    {
+                        <button class="btn btn-accept" @onclick="AcceptReservation" disabled="@_processing">
+                            @(_processing ? "..." : "Accepter")
+                        </button>
+                    }
+
+                    @if (Reservation.Status == ReservationStatus.Accepted)
+                    {
+                        <button class="btn btn-confirm" @onclick="ConfirmReservation" disabled="@_processing">
+                            @(_processing ? "..." : "Confirmer")
+                        </button>
+                    }
+
+                    <button class="btn danger" @onclick="() => OnDelete.InvokeAsync(Reservation)">Supprimer</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ReservationDetailDto Reservation { get; set; } = default!;
+    [Parameter] public bool IsAuthenticated { get; set; }
+    [Parameter] public string? CurrentOwnerName { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<ReservationDetailDto> OnEdit { get; set; }
+    [Parameter] public EventCallback<ReservationDetailDto> OnDelete { get; set; }
+    [Parameter] public EventCallback OnStatusChanged { get; set; }
+
+    [Inject] private IMediator Mediator { get; set; } = default!;
+
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _processing;
+
+    private async Task AcceptReservation()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        _processing = true;
+
+        try
+        {
+            await Mediator.Send(
+                new PlanningLocation.Application.Commands.AcceptReservation.AcceptReservationCommand(
+                    Reservation.Id, CurrentOwnerName ?? ""));
+            _successMessage = "Réservation acceptée.";
+            await OnStatusChanged.InvokeAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _errorMessage = "Vous devez être connecté pour effectuer cette action.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private async Task ConfirmReservation()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        _processing = true;
+
+        try
+        {
+            await Mediator.Send(
+                new PlanningLocation.Application.Commands.ConfirmReservation.ConfirmReservationCommand(
+                    Reservation.Id, CurrentOwnerName ?? ""));
+            _successMessage = "Réservation confirmée.";
+            await OnStatusChanged.InvokeAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _errorMessage = "Vous devez être connecté pour effectuer cette action.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _processing = false;
+        }
+    }
+
+    private string GetClientTypeLabel() => Reservation.ClientType switch
+    {
+        ClientType.Owner => "Propriétaire",
+        ClientType.GuestWithPresence => "Invité avec présence",
+        ClientType.Acquaintance => "Connaissance",
+        ClientType.MobileHome => "Mobil-home",
+        ClientType.Tent => "Tente",
+        _ => ""
+    };
+
+    private string GetStatusLabel() => Reservation.Status switch
+    {
+        ReservationStatus.Pending => "Demande",
+        ReservationStatus.Accepted => "Acceptée",
+        ReservationStatus.Confirmed => "Confirmée",
+        _ => ""
+    };
+
+    private string GetStatusBadgeClass() => Reservation.Status switch
+    {
+        ReservationStatus.Pending => "st-pending",
+        ReservationStatus.Accepted => "st-accepted",
+        ReservationStatus.Confirmed => "st-confirmed",
+        _ => ""
+    };
+}

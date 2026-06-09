@@ -1,4 +1,5 @@
 using MediatR;
+using PlanningLocation.Application.Behaviors;
 using PlanningLocation.Domain.Enums;
 
 namespace PlanningLocation.Application.Commands.CreateReservation;
@@ -11,4 +12,4 @@ public record CreateReservationCommand(
     string TenantName,
     int AdultCount,
     int ChildrenUnder3Count,
-    ClientType ClientType) : IRequest<Guid>;
+    ClientType ClientType) : IRequest<Guid>, IRequireAuthorization;

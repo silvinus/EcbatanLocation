@@ -1,0 +1,30 @@
+<div class="booking @GetStatusClass()" @onclick="OnClick">
+    <div class="who">@Reservation.TenantName</div>
+    <div class="owner">@Reservation.OwnerName</div>
+    <div class="sub">
+        <span>@Reservation.AdultCount ad.</span>
+        <span>@Reservation.ChildrenUnder3Count &lt;3a</span>
+        <span class="badge">@GetStatusLabel()</span>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ReservationPlanningDto Reservation { get; set; } = default!;
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private string GetStatusClass() => Reservation.Status switch
+    {
+        ReservationStatus.Pending => "st-pending",
+        ReservationStatus.Accepted => "st-accepted",
+        ReservationStatus.Confirmed => "st-confirmed",
+        _ => ""
+    };
+
+    private string GetStatusLabel() => Reservation.Status switch
+    {
+        ReservationStatus.Pending => "Demande",
+        ReservationStatus.Accepted => "Acceptée",
+        ReservationStatus.Confirmed => "Confirmée",
+        _ => ""
+    };
+}

@@ -1,0 +1,82 @@
+@{
+    var today = DateOnly.FromDateTime(DateTime.Today);
+    var culture = new System.Globalization.CultureInfo("fr-FR");
+    var days = Enumerable.Range(0, 7).Select(i => WeekStart.AddDays(i)).ToList();
+}
+
+<div class="week-nav">
+    <button class="btn-nav" @onclick="PreviousWeek">&lt;</button>
+    <span class="month-label">
+        @WeekStart.ToString("dd MMM", culture) — @WeekStart.AddDays(6).ToString("dd MMM yyyy", culture)
+    </span>
+    <button class="btn-nav" @onclick="NextWeek">&gt;</button>
+</div>
+
+<table aria-label="planning semaine">
+    <thead>
+        <tr>
+            <th class="studio-col">Studio</th>
+            @foreach (var date in days)
+            {
+                var isToday = date == today;
+                var isSelected = date == SelectedDate;
+                var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                <th class="day-col week-day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "")">
+                    <span class="day-header @(isToday ? "today" : "") @(isWeekend ? "weekend" : "")"
+                          @onclick="() => OnDayClicked(date)">
+                        @date.ToString("ddd", culture)<br/>@date.Day
+                    </span>
+                </th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var studioPlan in Planning.Studios)
+        {
+            <tr>
+                <td class="studio-col">
+                    <div class="studio-name">@studioPlan.Studio.Name</div>
+                    <div class="studio-meta">@studioPlan.Studio.Capacity pl.</div>
+                </td>
+                @foreach (var date in days)
+                {
+                    var isToday = date == today;
+                    var isSelected = date == SelectedDate;
+                    var dayReservations = studioPlan.Reservations
+                        .Where(r => r.StartDate <= date && r.EndDate > date)
+                        .ToList();
+                    <td class="day-col week-day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "")">
+                        <div class="cell">
+                            @foreach (var res in dayReservations)
+                            {
+                                <ReservationCell Reservation="@res"
+                                                 OnClick="() => OnReservationClick(res.Id)" />
+                            }
+                        </div>
+                    </td>
+                }
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter, EditorRequired] public PlanningMensuelDto Planning { get; set; } = default!;
+    [Parameter] public DateOnly WeekStart { get; set; }
+    [Parameter] public DateOnly? SelectedDate { get; set; }
+    [Parameter] public EventCallback<DateOnly> OnDaySelected { get; set; }
+    [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
+
+    private async Task OnDayClicked(DateOnly date) => await OnDaySelected.InvokeAsync(date);
+    private async Task OnReservationClick(Guid id) => await OnReservationClicked.InvokeAsync(id);
+
+    private void PreviousWeek()
+    {
+        WeekStart = WeekStart.AddDays(-7);
+    }
+
+    private void NextWeek()
+    {
+        WeekStart = WeekStart.AddDays(7);
+    }
+}
