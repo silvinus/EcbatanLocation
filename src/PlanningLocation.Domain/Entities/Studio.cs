@@ -3,24 +3,24 @@ namespace PlanningLocation.Domain.Entities;
 public class Studio
 {
     public Guid Id { get; private set; }
-    public string Nom { get; private set; } = default!;
-    public int Capacite { get; private set; }
-    public bool ACuisine { get; private set; }
-    public bool LouableSeul { get; private set; }
-    public int OrdreAffichage { get; private set; }
+    public string Name { get; private set; } = default!;
+    public int Capacity { get; private set; }
+    public bool HasKitchen { get; private set; }
+    public bool RentableAlone { get; private set; }
+    public int DisplayOrder { get; private set; }
 
     private Studio() { }
 
-    public static Studio Creer(string nom, int capacite, bool aCuisine, bool louableSeul, int ordreAffichage)
+    public static Studio Create(string name, int capacity, bool hasKitchen, bool rentableAlone, int displayOrder)
     {
         return new Studio
         {
             Id = Guid.NewGuid(),
-            Nom = nom,
-            Capacite = capacite,
-            ACuisine = aCuisine,
-            LouableSeul = louableSeul,
-            OrdreAffichage = ordreAffichage
+            Name = name,
+            Capacity = capacity,
+            HasKitchen = hasKitchen,
+            RentableAlone = rentableAlone,
+            DisplayOrder = displayOrder
         };
     }
 }

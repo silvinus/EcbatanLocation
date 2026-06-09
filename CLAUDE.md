@@ -134,6 +134,7 @@ Transition : Demande → Acceptée → Confirmée. Chaque transition enregistre 
 
 ## Conventions de code
 
+- **Tout le code est en anglais** : noms de classes, propriétés, méthodes, variables, commentaires, messages d'erreur. Seul le CLAUDE.md et la documentation restent en français.
 - Nommage C# standard (PascalCase classes/méthodes, camelCase variables locales)
 - Entités : constructeurs privés + méthodes de fabrique / méthodes métier
 - Value Objects : records C# immutables
@@ -167,7 +168,7 @@ Ces points sont volontairement isolés dans le code (méthode dédiée, point un
 
 ### H1 — Studio non louable seul
 Un studio `LouableSeul = false` ne peut être réservé que si le même propriétaire possède déjà une réservation sur un studio `LouableSeul = true` dont les dates chevauchent (même partiellement).
-- **Point de modification** : `ReservationDomainService.ValiderDependanceStudio()`
+- **Point de modification** : `ReservationDomainService.ValidateStudioDependency()`
 
 ### H2 — Places occupées
 Places occupées = capacité max des studios ayant au moins une réservation Acceptée ou Confirmée ce jour-là (pas les Demandes). Un studio est compté en entier (libre ou occupé).

@@ -19,14 +19,14 @@ public static class DbInitializer
         await context.Database.MigrateAsync();
 
         await SeedRolesAsync(roleManager);
-        var proprietaires = await SeedProprietairesAsync(context, userManager);
+        await SeedOwnersAsync(context, userManager);
         await SeedStudiosAsync(context);
-        await SeedGrilleTarifaireAsync(context);
+        await SeedPricingGridAsync(context);
     }
 
     private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
     {
-        string[] roles = ["Proprietaire", "Admin"];
+        string[] roles = ["Owner", "Admin"];
         foreach (var role in roles)
         {
             if (!await roleManager.RoleExistsAsync(role))
@@ -34,14 +34,14 @@ public static class DbInitializer
         }
     }
 
-    private static async Task<List<Proprietaire>> SeedProprietairesAsync(
+    private static async Task SeedOwnersAsync(
         PlanningLocationDbContext context,
         UserManager<ApplicationUser> userManager)
     {
-        if (await context.Proprietaires.AnyAsync())
-            return await context.Proprietaires.ToListAsync();
+        if (await context.Owners.AnyAsync())
+            return;
 
-        var proprietairesData = new[]
+        var ownersData = new[]
         {
             ("Léa", "lea@planninglocation.fr"),
             ("Sarah", "sarah@planninglocation.fr"),
@@ -49,30 +49,26 @@ public static class DbInitializer
             ("Christophe", "christophe@planninglocation.fr")
         };
 
-        var proprietaires = new List<Proprietaire>();
-
-        foreach (var (nom, email) in proprietairesData)
+        foreach (var (name, email) in ownersData)
         {
             var user = new ApplicationUser
             {
                 UserName = email,
                 Email = email,
-                Nom = nom,
+                DisplayName = name,
                 EmailConfirmed = true
             };
 
             var result = await userManager.CreateAsync(user, "Password123!");
             if (result.Succeeded)
             {
-                await userManager.AddToRoleAsync(user, "Proprietaire");
-                var proprietaire = Proprietaire.Creer(nom, user.Id);
-                await context.Proprietaires.AddAsync(proprietaire);
-                proprietaires.Add(proprietaire);
+                await userManager.AddToRoleAsync(user, "Owner");
+                var owner = Owner.Create(name, user.Id);
+                await context.Owners.AddAsync(owner);
             }
         }
 
         await context.SaveChangesAsync();
-        return proprietaires;
     }
 
     private static async Task SeedStudiosAsync(PlanningLocationDbContext context)
@@ -82,35 +78,35 @@ public static class DbInitializer
 
         var studios = new[]
         {
-            Studio.Creer("Villa", 6, true, true, 1),
-            Studio.Creer("Studio Est", 2, true, true, 2),
-            Studio.Creer("Studio Ouest", 2, true, true, 3),
-            Studio.Creer("Studio Centre", 2, false, false, 4),
-            Studio.Creer("Mobil-home", 6, false, false, 5),
-            Studio.Creer("Emplacement tente 1", 4, false, true, 6),
-            Studio.Creer("Emplacement tente 2", 4, false, true, 7),
+            Studio.Create("Villa", 6, true, true, 1),
+            Studio.Create("Studio Est", 2, true, true, 2),
+            Studio.Create("Studio Ouest", 2, true, true, 3),
+            Studio.Create("Studio Centre", 2, false, false, 4),
+            Studio.Create("Mobil-home", 6, false, false, 5),
+            Studio.Create("Emplacement tente 1", 4, false, true, 6),
+            Studio.Create("Emplacement tente 2", 4, false, true, 7),
         };
 
         await context.Studios.AddRangeAsync(studios);
         await context.SaveChangesAsync();
     }
 
-    private static async Task SeedGrilleTarifaireAsync(PlanningLocationDbContext context)
+    private static async Task SeedPricingGridAsync(PlanningLocationDbContext context)
     {
-        if (await context.GrillesTarifaires.AnyAsync())
+        if (await context.PricingGrids.AnyAsync())
             return;
 
-        var lignes = new[]
+        var lines = new[]
         {
-            LigneTarif.Creer(TypeClient.Proprietaire, 3.50m),
-            LigneTarif.Creer(TypeClient.InviteAvecPresence, 7.00m),
-            LigneTarif.Creer(TypeClient.Connaissance, 15.00m),
-            LigneTarif.Creer(TypeClient.MobilHome, 12.00m),
-            LigneTarif.Creer(TypeClient.Tente, 7.00m),
+            PricingLine.Create(ClientType.Owner, 3.50m),
+            PricingLine.Create(ClientType.GuestWithPresence, 7.00m),
+            PricingLine.Create(ClientType.Acquaintance, 15.00m),
+            PricingLine.Create(ClientType.MobileHome, 12.00m),
+            PricingLine.Create(ClientType.Tent, 7.00m),
         };
 
-        var grille = GrilleTarifaire.Creer(2026, lignes);
-        await context.GrillesTarifaires.AddAsync(grille);
+        var grid = PricingGrid.Create(2026, lines);
+        await context.PricingGrids.AddAsync(grid);
         await context.SaveChangesAsync();
     }
 }

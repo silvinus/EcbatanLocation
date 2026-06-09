@@ -8,10 +8,10 @@ namespace PlanningLocation.Infrastructure.Persistence;
 public class PlanningLocationDbContext : IdentityDbContext<ApplicationUser>
 {
     public DbSet<Studio> Studios => Set<Studio>();
-    public DbSet<Proprietaire> Proprietaires => Set<Proprietaire>();
+    public DbSet<Owner> Owners => Set<Owner>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
-    public DbSet<GrilleTarifaire> GrillesTarifaires => Set<GrilleTarifaire>();
-    public DbSet<LigneTarif> LignesTarifs => Set<LigneTarif>();
+    public DbSet<PricingGrid> PricingGrids => Set<PricingGrid>();
+    public DbSet<PricingLine> PricingLines => Set<PricingLine>();
 
     public PlanningLocationDbContext(DbContextOptions<PlanningLocationDbContext> options)
         : base(options)

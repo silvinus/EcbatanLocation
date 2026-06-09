@@ -1,19 +1,19 @@
 namespace PlanningLocation.Domain.Entities;
 
-public class Proprietaire
+public class Owner
 {
     public Guid Id { get; private set; }
-    public string Nom { get; private set; } = default!;
+    public string Name { get; private set; } = default!;
     public string UserId { get; private set; } = default!;
 
-    private Proprietaire() { }
+    private Owner() { }
 
-    public static Proprietaire Creer(string nom, string userId)
+    public static Owner Create(string name, string userId)
     {
-        return new Proprietaire
+        return new Owner
         {
             Id = Guid.NewGuid(),
-            Nom = nom,
+            Name = name,
             UserId = userId
         };
     }

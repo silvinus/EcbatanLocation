@@ -7,94 +7,102 @@ public class Reservation
 {
     public Guid Id { get; private set; }
     public Guid StudioId { get; private set; }
-    public Guid ProprietaireId { get; private set; }
+    public Guid OwnerId { get; private set; }
     public DateRange Dates { get; private set; } = default!;
-    public string NomLocataire { get; private set; } = default!;
-    public int NbAdultes { get; private set; }
-    public int NbEnfantsMoins3Ans { get; private set; }
-    public TypeClient TypeClient { get; private set; }
-    public StatutReservation Statut { get; private set; }
-    public string? AccepteePar { get; private set; }
-    public DateTime? AccepteeLe { get; private set; }
-    public string? ConfirmeePar { get; private set; }
-    public DateTime? ConfirmeeLe { get; private set; }
-    public DateTime CreeLe { get; private set; }
-    public DateTime? ModifieeLe { get; private set; }
+    public string TenantName { get; private set; } = default!;
+    public int AdultCount { get; private set; }
+    public int ChildrenUnder3Count { get; private set; }
+    public ClientType ClientType { get; private set; }
+    public ReservationStatus Status { get; private set; }
+    public string? AcceptedBy { get; private set; }
+    public DateTime? AcceptedAt { get; private set; }
+    public string? ConfirmedBy { get; private set; }
+    public DateTime? ConfirmedAt { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public DateTime? UpdatedAt { get; private set; }
 
     private Reservation() { }
 
-    public static Reservation Creer(
+    public static Reservation Create(
         Guid studioId,
-        Guid proprietaireId,
+        Guid ownerId,
         DateRange dates,
-        string nomLocataire,
-        int nbAdultes,
-        int nbEnfantsMoins3Ans,
-        TypeClient typeClient)
+        string tenantName,
+        int adultCount,
+        int childrenUnder3Count,
+        ClientType clientType,
+        int studioCapacity)
     {
-        if (nbAdultes < 1)
-            throw new ArgumentException("Au moins un adulte est requis.");
-        if (nbEnfantsMoins3Ans < 0)
-            throw new ArgumentException("Le nombre d'enfants ne peut pas être négatif.");
-        if (string.IsNullOrWhiteSpace(nomLocataire))
-            throw new ArgumentException("Le nom du locataire est requis.");
+        if (adultCount < 1)
+            throw new ArgumentException("At least one adult is required.");
+        if (childrenUnder3Count < 0)
+            throw new ArgumentException("Children count cannot be negative.");
+        if (string.IsNullOrWhiteSpace(tenantName))
+            throw new ArgumentException("Tenant name is required.");
+        if (adultCount + childrenUnder3Count > studioCapacity)
+            throw new InvalidOperationException(
+                $"Capacity exceeded: {adultCount + childrenUnder3Count} persons for a capacity of {studioCapacity}.");
 
         return new Reservation
         {
             Id = Guid.NewGuid(),
             StudioId = studioId,
-            ProprietaireId = proprietaireId,
+            OwnerId = ownerId,
             Dates = dates,
-            NomLocataire = nomLocataire,
-            NbAdultes = nbAdultes,
-            NbEnfantsMoins3Ans = nbEnfantsMoins3Ans,
-            TypeClient = typeClient,
-            Statut = StatutReservation.Demande,
-            CreeLe = DateTime.UtcNow
+            TenantName = tenantName,
+            AdultCount = adultCount,
+            ChildrenUnder3Count = childrenUnder3Count,
+            ClientType = clientType,
+            Status = ReservationStatus.Pending,
+            CreatedAt = DateTime.UtcNow
         };
     }
 
-    public void Accepter(string parQui)
+    public void Accept(string by)
     {
-        if (Statut != StatutReservation.Demande)
-            throw new InvalidOperationException("Seule une réservation en 'Demande' peut être acceptée.");
+        if (Status != ReservationStatus.Pending)
+            throw new InvalidOperationException("Only a 'Pending' reservation can be accepted.");
 
-        Statut = StatutReservation.Acceptee;
-        AccepteePar = parQui;
-        AccepteeLe = DateTime.UtcNow;
-        ModifieeLe = DateTime.UtcNow;
+        Status = ReservationStatus.Accepted;
+        AcceptedBy = by;
+        AcceptedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Confirmer(string parQui)
+    public void Confirm(string by)
     {
-        if (Statut != StatutReservation.Acceptee)
-            throw new InvalidOperationException("Seule une réservation 'Acceptée' peut être confirmée.");
+        if (Status != ReservationStatus.Accepted)
+            throw new InvalidOperationException("Only an 'Accepted' reservation can be confirmed.");
 
-        Statut = StatutReservation.Confirmee;
-        ConfirmeePar = parQui;
-        ConfirmeeLe = DateTime.UtcNow;
-        ModifieeLe = DateTime.UtcNow;
+        Status = ReservationStatus.Confirmed;
+        ConfirmedBy = by;
+        ConfirmedAt = DateTime.UtcNow;
+        UpdatedAt = DateTime.UtcNow;
     }
 
-    public void Modifier(
+    public void Update(
         DateRange dates,
-        string nomLocataire,
-        int nbAdultes,
-        int nbEnfantsMoins3Ans,
-        TypeClient typeClient)
+        string tenantName,
+        int adultCount,
+        int childrenUnder3Count,
+        ClientType clientType,
+        int studioCapacity)
     {
-        if (nbAdultes < 1)
-            throw new ArgumentException("Au moins un adulte est requis.");
-        if (nbEnfantsMoins3Ans < 0)
-            throw new ArgumentException("Le nombre d'enfants ne peut pas être négatif.");
+        if (adultCount < 1)
+            throw new ArgumentException("At least one adult is required.");
+        if (childrenUnder3Count < 0)
+            throw new ArgumentException("Children count cannot be negative.");
+        if (adultCount + childrenUnder3Count > studioCapacity)
+            throw new InvalidOperationException(
+                $"Capacity exceeded: {adultCount + childrenUnder3Count} persons for a capacity of {studioCapacity}.");
 
         Dates = dates;
-        NomLocataire = nomLocataire;
-        NbAdultes = nbAdultes;
-        NbEnfantsMoins3Ans = nbEnfantsMoins3Ans;
-        TypeClient = typeClient;
-        ModifieeLe = DateTime.UtcNow;
+        TenantName = tenantName;
+        AdultCount = adultCount;
+        ChildrenUnder3Count = childrenUnder3Count;
+        ClientType = clientType;
+        UpdatedAt = DateTime.UtcNow;
     }
 
-    public int NombreTotalPersonnes => NbAdultes + NbEnfantsMoins3Ans;
+    public int TotalPersonCount => AdultCount + ChildrenUnder3Count;
 }

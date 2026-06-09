@@ -11,5 +11,5 @@ public class StudioRepository(PlanningLocationDbContext context) : IStudioReposi
         => await context.Studios.FindAsync([id], ct);
 
     public async Task<IReadOnlyList<Studio>> GetAllAsync(CancellationToken ct = default)
-        => await context.Studios.OrderBy(s => s.OrdreAffichage).ToListAsync(ct);
+        => await context.Studios.OrderBy(s => s.DisplayOrder).ToListAsync(ct);
 }

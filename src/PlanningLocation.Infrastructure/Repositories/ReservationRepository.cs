@@ -11,17 +11,17 @@ public class ReservationRepository(PlanningLocationDbContext context) : IReserva
     public async Task<Reservation?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await context.Reservations.FindAsync([id], ct);
 
-    public async Task<IReadOnlyList<Reservation>> GetByMoisAsync(int annee, int mois, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Reservation>> GetByMonthAsync(int year, int month, CancellationToken ct = default)
     {
-        var debutMois = new DateOnly(annee, mois, 1);
-        var finMois = debutMois.AddMonths(1);
+        var monthStart = new DateOnly(year, month, 1);
+        var monthEnd = monthStart.AddMonths(1);
 
         return await context.Reservations
-            .Where(r => r.Dates.DateDebut < finMois && r.Dates.DateFin > debutMois)
+            .Where(r => r.Dates.StartDate < monthEnd && r.Dates.EndDate > monthStart)
             .ToListAsync(ct);
     }
 
-    public async Task<bool> ExisteChevauchementAsync(
+    public async Task<bool> ExistsOverlapAsync(
         Guid studioId,
         DateRange dates,
         Guid? excludeReservationId = null,
@@ -29,7 +29,7 @@ public class ReservationRepository(PlanningLocationDbContext context) : IReserva
     {
         var query = context.Reservations
             .Where(r => r.StudioId == studioId)
-            .Where(r => r.Dates.DateDebut < dates.DateFin && r.Dates.DateFin > dates.DateDebut);
+            .Where(r => r.Dates.StartDate < dates.EndDate && r.Dates.EndDate > dates.StartDate);
 
         if (excludeReservationId.HasValue)
             query = query.Where(r => r.Id != excludeReservationId.Value);

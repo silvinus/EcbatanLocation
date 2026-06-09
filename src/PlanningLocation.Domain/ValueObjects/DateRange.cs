@@ -2,23 +2,23 @@ namespace PlanningLocation.Domain.ValueObjects;
 
 public sealed record DateRange
 {
-    public DateOnly DateDebut { get; }
-    public DateOnly DateFin { get; }
+    public DateOnly StartDate { get; }
+    public DateOnly EndDate { get; }
 
-    public DateRange(DateOnly dateDebut, DateOnly dateFin)
+    public DateRange(DateOnly startDate, DateOnly endDate)
     {
-        if (dateFin <= dateDebut)
-            throw new ArgumentException("La date de fin doit être postérieure à la date de début.");
+        if (endDate <= startDate)
+            throw new ArgumentException("End date must be after start date.");
 
-        DateDebut = dateDebut;
-        DateFin = dateFin;
+        StartDate = startDate;
+        EndDate = endDate;
     }
 
-    public int NombreDeJours => DateFin.DayNumber - DateDebut.DayNumber;
+    public int NumberOfDays => EndDate.DayNumber - StartDate.DayNumber;
 
-    public bool Chevauche(DateRange other)
-        => DateDebut < other.DateFin && other.DateDebut < DateFin;
+    public bool Overlaps(DateRange other)
+        => StartDate < other.EndDate && other.StartDate < EndDate;
 
-    public bool ContientJour(DateOnly jour)
-        => jour >= DateDebut && jour < DateFin;
+    public bool ContainsDay(DateOnly day)
+        => day >= StartDate && day < EndDate;
 }

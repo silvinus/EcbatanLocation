@@ -12,19 +12,19 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
 
         builder.OwnsOne(r => r.Dates, dates =>
         {
-            dates.Property(d => d.DateDebut).HasColumnName("DateDebut").IsRequired();
-            dates.Property(d => d.DateFin).HasColumnName("DateFin").IsRequired();
+            dates.Property(d => d.StartDate).HasColumnName("StartDate").IsRequired();
+            dates.Property(d => d.EndDate).HasColumnName("EndDate").IsRequired();
         });
 
-        builder.Property(r => r.NomLocataire).IsRequired().HasMaxLength(200);
-        builder.Property(r => r.NbAdultes).IsRequired();
-        builder.Property(r => r.NbEnfantsMoins3Ans).IsRequired();
-        builder.Property(r => r.TypeClient).IsRequired().HasConversion<string>().HasMaxLength(50);
-        builder.Property(r => r.Statut).IsRequired().HasConversion<string>().HasMaxLength(20);
-        builder.Property(r => r.AccepteePar).HasMaxLength(200);
-        builder.Property(r => r.ConfirmeePar).HasMaxLength(200);
+        builder.Property(r => r.TenantName).IsRequired().HasMaxLength(200);
+        builder.Property(r => r.AdultCount).IsRequired();
+        builder.Property(r => r.ChildrenUnder3Count).IsRequired();
+        builder.Property(r => r.ClientType).IsRequired().HasConversion<string>().HasMaxLength(50);
+        builder.Property(r => r.Status).IsRequired().HasConversion<string>().HasMaxLength(20);
+        builder.Property(r => r.AcceptedBy).HasMaxLength(200);
+        builder.Property(r => r.ConfirmedBy).HasMaxLength(200);
 
         builder.HasIndex(r => r.StudioId);
-        builder.HasIndex(r => new { r.StudioId, r.Statut });
+        builder.HasIndex(r => new { r.StudioId, r.Status });
     }
 }

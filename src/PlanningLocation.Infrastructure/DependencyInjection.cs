@@ -32,8 +32,8 @@ public static class DependencyInjection
 
         services.AddScoped<IStudioRepository, StudioRepository>();
         services.AddScoped<IReservationRepository, ReservationRepository>();
-        services.AddScoped<IProprietaireRepository, ProprietaireRepository>();
-        services.AddScoped<IGrilleTarifaireRepository, GrilleTarifaireRepository>();
+        services.AddScoped<IOwnerRepository, OwnerRepository>();
+        services.AddScoped<IPricingGridRepository, PricingGridRepository>();
 
         return services;
     }
