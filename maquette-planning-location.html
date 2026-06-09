@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Maquette – Planning location (maison de vacances)</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#0f1a30;
+      --panel2:#0d1730;
+      --txt:#eaf0ff;
+      --muted:#b7c2e2;
+      --line:rgba(255,255,255,.12);
+      --brand:#6ea8ff;
+      --ok:#27c48b;
+      --warn:#ffb020;
+      --danger:#ff5c7a;
+      --chip:#16264a;
+      --shadow:0 16px 40px rgba(0,0,0,.35);
+      --radius:16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:var(--sans);background:linear-gradient(180deg,#070b14 0%, #0b1220 45%, #070b14 100%);color:var(--txt)}
+    a{color:inherit}
+    .wrap{max-width:1200px;margin:0 auto;padding:22px 18px 42px}
+
+    header{
+      display:flex;gap:14px;align-items:center;justify-content:space-between;
+      margin:10px 0 18px;
+    }
+    .title{display:flex;flex-direction:column;gap:4px}
+    .title h1{font-size:18px;margin:0;letter-spacing:.2px}
+    .title p{margin:0;color:var(--muted);font-size:13px}
+
+    .top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .btn{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--txt);
+      padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:600;font-size:13px}
+    .btn.primary{background:linear-gradient(90deg,rgba(110,168,255,.25),rgba(110,168,255,.08));border-color:rgba(110,168,255,.45)}
+    .pill{font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+
+    .layout{display:grid;grid-template-columns: 340px 1fr;gap:14px}
+    @media (max-width: 1020px){.layout{grid-template-columns:1fr}.sidebar{order:2}}
+
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid var(--line);
+      border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card h2{margin:0;font-size:14px;letter-spacing:.2px}
+    .card .hd{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 10px;border-bottom:1px solid var(--line)}
+    .card .bd{padding:14px}
+
+    .grid{display:grid;gap:10px}
+
+    .field{display:flex;flex-direction:column;gap:6px}
+    .field label{font-size:12px;color:var(--muted)}
+    .field input,.field select{
+      background:rgba(0,0,0,.22);border:1px solid var(--line);color:var(--txt);
+      padding:10px 10px;border-radius:12px;font-size:13px;outline:none
+    }
+
+    .row{display:grid;grid-template-columns: 1fr 1fr;gap:10px}
+    .row3{display:grid;grid-template-columns: 1fr 1fr 1fr;gap:10px}
+
+    .chips{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{padding:7px 9px;border-radius:999px;background:rgba(110,168,255,.10);border:1px solid rgba(110,168,255,.30);font-size:12px;color:var(--txt)}
+    .chip.muted{background:rgba(255,255,255,.06);border-color:var(--line);color:var(--muted)}
+
+    .legend{display:flex;gap:8px;flex-wrap:wrap}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .legend-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px;background:rgba(255,255,255,.03)}
+
+    /* Planning */
+    .planning{overflow:auto}
+    table{border-collapse:separate;border-spacing:0;min-width:920px;width:100%}
+    th,td{border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+    th:first-child,td:first-child{border-left:1px solid var(--line)}
+    thead th{position:sticky;top:0;background:rgba(11,18,32,.94);backdrop-filter: blur(10px);z-index:2}
+    th{padding:10px 10px;text-align:left;font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap}
+    td{padding:8px 10px;font-size:13px;vertical-align:top;min-height:50px}
+
+    .studio-col{width:210px;background:rgba(255,255,255,.03);position:sticky;left:0;z-index:1}
+    .studio-name{font-weight:800;color:var(--txt)}
+    .studio-meta{color:var(--muted);font-size:12px;margin-top:2px}
+
+    .cell{display:flex;flex-direction:column;gap:6px;min-height:58px}
+
+    .booking{border-radius:12px;padding:8px 9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.05)}
+    .booking .line1{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .booking .who{font-weight:800;font-size:12.5px}
+    .booking .owner{font-size:11.5px;color:var(--muted)}
+    .booking .sub{margin-top:5px;font-size:11.5px;color:var(--muted);display:flex;justify-content:space-between;gap:10px}
+    .badge{font-size:10.5px;padding:4px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+
+    .st-demande{border-color:rgba(255,176,32,.55);background:rgba(255,176,32,.10)}
+    .st-acceptee{border-color:rgba(110,168,255,.55);background:rgba(110,168,255,.12)}
+    .st-confirmee{border-color:rgba(39,196,139,.60);background:rgba(39,196,139,.12)}
+
+    .kpi{display:grid;grid-template-columns: 1fr 1fr;gap:10px}
+    .kpi .box{border:1px solid var(--line);border-radius:14px;padding:10px;background:rgba(255,255,255,.03)}
+    .kpi .big{font-size:20px;font-weight:900}
+    .kpi .lab{font-size:12px;color:var(--muted)}
+
+    .hint{color:var(--muted);font-size:12px;line-height:1.4}
+    .sep{height:1px;background:var(--line);margin:12px 0}
+    .mono{font-family:var(--mono)}
+
+    /* Modal (fake) */
+    dialog{border:none;border-radius:18px;padding:0;max-width:720px;width:calc(100% - 30px);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));color:var(--txt);box-shadow:var(--shadow)}
+    dialog::backdrop{background:rgba(0,0,0,.55)}
+    .modal-hd{padding:14px 14px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .modal-bd{padding:14px}
+    .x{background:transparent;border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:8px 10px;cursor:pointer}
+
+    .footer-note{margin-top:12px;color:var(--muted);font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="title">
+        <h1>Planning de location – maison de vacances (maquette)</h1>
+        <p>Vue mensuelle + réservations (lecture publique / édition propriétaires)</p>
+      </div>
+      <div class="top-actions">
+        <span class="pill">Mode : <b>Public (lecture seule)</b></span>
+        <button class="btn">Se connecter</button>
+        <button class="btn primary" id="openNew">+ Nouvelle réservation</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar card">
+        <div class="hd">
+          <h2>Filtres & synthèse</h2>
+          <span class="pill mono">2026-07</span>
+        </div>
+        <div class="bd grid">
+          <div class="row">
+            <div class="field">
+              <label>Mois</label>
+              <input value="Juillet 2026" />
+            </div>
+            <div class="field">
+              <label>Studio</label>
+              <select>
+                <option>Tous</option>
+                <option>Studio A (cuisine)</option>
+                <option>Studio B (sans cuisine)</option>
+                <option>Studio C (cuisine)</option>
+                <option>Mobil-home</option>
+                <option>Emplacement tente</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label>Statut</label>
+              <select>
+                <option>Tous</option>
+                <option>Demande</option>
+                <option>Acceptée</option>
+                <option>Confirmée</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Propriétaire</label>
+              <select>
+                <option>Tous</option>
+                <option>Propriétaire 1</option>
+                <option>Propriétaire 2</option>
+                <option>Propriétaire 3</option>
+                <option>Propriétaire 4</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="kpi">
+            <div class="box">
+              <div class="big">14 / 26</div>
+              <div class="lab">Places occupées / disponibles (jour sélectionné)</div>
+            </div>
+            <div class="box">
+              <div class="big">3</div>
+              <div class="lab">Studios occupés (jour sélectionné)</div>
+            </div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="hint">
+            <b>Légende statuts</b>
+            <div class="legend" style="margin-top:8px">
+              <div class="legend-item"><span class="dot" style="background:var(--warn)"></span> Demande</div>
+              <div class="legend-item"><span class="dot" style="background:var(--brand)"></span> Acceptée</div>
+              <div class="legend-item"><span class="dot" style="background:var(--ok)"></span> Confirmée</div>
+            </div>
+            <div class="footer-note">* Les couleurs des statuts sont figées (configurable une fois).</div>
+          </div>
+
+          <div class="sep"></div>
+
+          <div class="hint">
+            <b>Rappels métier</b>
+            <div class="chips" style="margin-top:8px">
+              <span class="chip">Un studio = libre ou occupé</span>
+              <span class="chip">Pas de location partielle</span>
+              <span class="chip muted">Studios figés</span>
+              <span class="chip muted">Tarifs versionnés / année</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="card">
+        <div class="hd">
+          <h2>Planning (extrait 10 jours)</h2>
+          <div class="chips">
+            <span class="chip">Vue : Mois</span>
+            <span class="chip muted">Semaine</span>
+            <span class="chip muted">Liste</span>
+          </div>
+        </div>
+        <div class="bd planning">
+          <table aria-label="planning">
+            <thead>
+              <tr>
+                <th class="studio-col">Studio</th>
+                <th>01</th><th>02</th><th>03</th><th>04</th><th>05</th>
+                <th>06</th><th>07</th><th>08</th><th>09</th><th>10</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="studio-col">
+                  <div class="studio-name">Studio A</div>
+                  <div class="studio-meta">Cuisine • 4 places • Indépendant</div>
+                </td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td>
+                  <div class="cell">
+                    <div class="booking st-demande">
+                      <div class="line1">
+                        <div>
+                          <div class="who">Dupont</div>
+                          <div class="owner">Prop. 2</div>
+                        </div>
+                        <span class="badge">Demande</span>
+                      </div>
+                      <div class="sub"><span>2 adultes</span><span>0 &lt;3 ans</span></div>
+                    </div>
+                  </div>
+                </td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td>
+                  <div class="cell">
+                    <div class="booking st-confirmee">
+                      <div class="line1">
+                        <div>
+                          <div class="who">Martin</div>
+                          <div class="owner">Prop. 1</div>
+                        </div>
+                        <span class="badge">Confirmée</span>
+                      </div>
+                      <div class="sub"><span>2 adultes</span><span>1 &lt;3 ans</span></div>
+                    </div>
+                  </div>
+                </td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+              </tr>
+
+              <tr>
+                <td class="studio-col">
+                  <div class="studio-name">Studio B</div>
+                  <div class="studio-meta">Sans cuisine • 2 places • <b>Non louable seul</b></div>
+                </td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td>
+                  <div class="cell">
+                    <div class="booking st-acceptee">
+                      <div class="line1">
+                        <div>
+                          <div class="who">Bernard</div>
+                          <div class="owner">Prop. 3</div>
+                        </div>
+                        <span class="badge">Acceptée</span>
+                      </div>
+                      <div class="sub"><span>1 adulte</span><span>0 &lt;3 ans</span></div>
+                    </div>
+                  </div>
+                </td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+              </tr>
+
+              <tr>
+                <td class="studio-col">
+                  <div class="studio-name">Mobil-home</div>
+                  <div class="studio-meta">6 places • Tarif spécial “mobil home”</div>
+                </td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td>
+                  <div class="cell">
+                    <div class="booking st-confirmee">
+                      <div class="line1">
+                        <div>
+                          <div class="who">Leroy</div>
+                          <div class="owner">Prop. 4</div>
+                        </div>
+                        <span class="badge">Confirmée</span>
+                      </div>
+                      <div class="sub"><span>4 adultes</span><span>0 &lt;3 ans</span></div>
+                    </div>
+                  </div>
+                </td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+                <td><div class="cell"></div></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="footer-note">Astuce maquette : cliquez sur “Nouvelle réservation” pour voir un formulaire type.</p>
+        </div>
+      </main>
+    </div>
+
+    <dialog id="modal">
+      <div class="modal-hd">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div style="font-weight:900">Nouvelle réservation (propriétaire)</div>
+          <div style="font-size:12px;color:var(--muted)">Formulaire indicatif (non fonctionnel)</div>
+        </div>
+        <button class="x" id="close">Fermer</button>
+      </div>
+      <div class="modal-bd grid">
+        <div class="row">
+          <div class="field">
+            <label>Studio</label>
+            <select>
+              <option>Studio A</option>
+              <option>Studio C</option>
+              <option>Mobil-home</option>
+              <option>Emplacement tente</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Propriétaire</label>
+            <select>
+              <option>Propriétaire 1</option>
+              <option>Propriétaire 2</option>
+              <option>Propriétaire 3</option>
+              <option>Propriétaire 4</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Du</label>
+            <input value="2026-07-03" />
+          </div>
+          <div class="field">
+            <label>Au</label>
+            <input value="2026-07-10" />
+          </div>
+        </div>
+
+        <div class="row3">
+          <div class="field">
+            <label>Locataire (nom)</label>
+            <input placeholder="Nom / prénom" />
+          </div>
+          <div class="field">
+            <label>Adultes</label>
+            <input value="2" />
+          </div>
+          <div class="field">
+            <label>Enfants &lt;3 ans</label>
+            <input value="1" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Type client (tarif)</label>
+            <select>
+              <option>Propriétaire</option>
+              <option>Invités avec présence</option>
+              <option>Connaissances</option>
+              <option>Connaissances -3 ans</option>
+              <option>Mobil home (spécial)</option>
+              <option>Tente (spécial)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Statut</label>
+            <select>
+              <option>Demande</option>
+              <option>Acceptée</option>
+              <option>Confirmée</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+        <div class="hint">
+          <b>Contrôles (à implémenter)</b>
+          <ul style="margin:8px 0 0 18px;color:var(--muted)">
+            <li>Vérifier l’absence de chevauchement sur le studio.</li>
+            <li>Empêcher la réservation d’un studio “sans cuisine” seul (si règle activée).</li>
+            <li>Capacité : Adultes + enfants ≤ nb places studio (si vous souhaitez cette contrainte).</li>
+            <li>Tracer l’acceptation : utilisateur + date/heure.</li>
+          </ul>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+          <button class="btn">Enregistrer en brouillon</button>
+          <button class="btn primary">Valider</button>
+        </div>
+      </div>
+    </dialog>
+
+  </div>
+
+  <script>
+    const modal = document.getElementById('modal');
+    document.getElementById('openNew').addEventListener('click', () => modal.showModal());
+    document.getElementById('close').addEventListener('click', () => modal.close());
+  </script>
+</body>
+</html>
