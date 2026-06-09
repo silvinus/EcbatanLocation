@@ -8,6 +8,7 @@
 
 <div class="admin-layout">
     <div class="admin-tabs">
+        <a href="/" class="chip muted" style="text-decoration:none">&lt; Planning</a>
         <button class="chip @(_activeTab == "pricing" ? "active" : "muted")" @onclick='() => _activeTab = "pricing"'>
             Grille tarifaire
         </button>
@@ -66,8 +67,8 @@
                                     <td>@GetClientTypeLabel(line.ClientType)</td>
                                     <td>
                                         <input type="number" step="0.50" min="0"
-                                               value="@line.Price"
-                                               @onchange="e => OnPriceChanged(line.ClientType, e)"
+                                               @bind-value="line.Price"
+                                               @bind-value:event="onchange"
                                                class="price-input" />
                                         <span class="price-unit">€</span>
                                     </td>
@@ -194,15 +195,6 @@
     {
         _pricingYear++;
         await LoadPricingGrid();
-    }
-
-    private void OnPriceChanged(ClientType type, ChangeEventArgs e)
-    {
-        var line = _editLines.FirstOrDefault(l => l.ClientType == type);
-        if (line is not null && decimal.TryParse(e.Value?.ToString(), out var price))
-        {
-            line.Price = price;
-        }
     }
 
     private void ResetPricing()

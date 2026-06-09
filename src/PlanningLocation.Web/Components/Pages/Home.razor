@@ -41,11 +41,10 @@
                     <button class="chip @(_viewMode == ViewMode.Week ? "active" : "muted")" @onclick="SwitchToWeekView">Semaine</button>
                     <button class="chip @(_viewMode == ViewMode.List ? "active" : "muted")" @onclick='() => _viewMode = ViewMode.List'>Liste</button>
                 </div>
-                <AuthorizeView>
-                    <Authorized>
-                        <button class="btn primary" @onclick="OpenCreateModal">+ Nouvelle réservation</button>
-                    </Authorized>
-                </AuthorizeView>
+                @if (_isAuthenticated)
+                {
+                    <button class="btn primary" @onclick="OpenCreateModal">+ Nouvelle réservation</button>
+                }
             </div>
         </div>
         <div class="bd planning">
@@ -188,11 +187,9 @@
 
     private async Task LoadOccupation()
     {
-        if (_selectedDate.HasValue)
-        {
-            _occupation = await Mediator.Send(
-                new PlanningLocation.Application.Queries.GetDailyOccupation.GetDailyOccupationQuery(_selectedDate.Value));
-        }
+        var date = _selectedDate ?? DateOnly.FromDateTime(DateTime.Today);
+        _occupation = await Mediator.Send(
+            new PlanningLocation.Application.Queries.GetDailyOccupation.GetDailyOccupationQuery(date));
     }
 
     private async Task PreviousMonth()
@@ -200,8 +197,8 @@
         if (Month == 1) { Month = 12; Year--; }
         else { Month--; }
         _selectedDate = null;
-        _occupation = null;
         await LoadPlanning();
+        await LoadOccupation();
     }
 
     private async Task NextMonth()
@@ -209,8 +206,8 @@
         if (Month == 12) { Month = 1; Year++; }
         else { Month++; }
         _selectedDate = null;
-        _occupation = null;
         await LoadPlanning();
+        await LoadOccupation();
     }
 
     private async Task OnYearMonthChanged((int year, int month) value)
@@ -218,8 +215,8 @@
         Year = value.year;
         Month = value.month;
         _selectedDate = null;
-        _occupation = null;
         await LoadPlanning();
+        await LoadOccupation();
     }
 
     private async Task OnStudioChanged(Guid? studioId)
@@ -282,7 +279,7 @@
         _editingReservation = null;
         _selectedReservation = null;
         await LoadPlanning();
-        if (_selectedDate.HasValue) await LoadOccupation();
+        await LoadOccupation();
     }
 
     private void OpenDeleteModal(ReservationDetailDto reservation)
@@ -304,7 +301,7 @@
         _deletingReservation = null;
         _selectedReservation = null;
         await LoadPlanning();
-        if (_selectedDate.HasValue) await LoadOccupation();
+        await LoadOccupation();
     }
 
     private async Task OnReservationStatusChanged()
@@ -316,6 +313,7 @@
                     _selectedReservation.Id));
         }
         await LoadPlanning();
+        await LoadOccupation();
     }
 
     private void SwitchToWeekView()
