@@ -14,9 +14,14 @@ public class EstimateAmountQueryHandler(
         var grid = await pricingGridRepository.GetByYearAsync(request.StartDate.Year, cancellationToken)
                    ?? throw new InvalidOperationException($"No pricing grid found for year {request.StartDate.Year}.");
 
-        var rate = grid.GetRate(request.ClientType);
-        var childRate = request.ClientType == ClientType.Acquaintance ? rate * 0.5m : rate;
+        var total = 0m;
+        foreach (var line in request.PersonLines)
+        {
+            var rate = grid.GetRate(line.ClientType);
+            var childRate = line.ClientType == ClientType.Acquaintance ? rate * 0.5m : rate;
+            total += (line.AdultCount * rate + line.ChildrenUnder3Count * childRate) * dates.NumberOfDays;
+        }
 
-        return (request.AdultCount * rate + request.ChildrenUnder3Count * childRate) * dates.NumberOfDays;
+        return total;
     }
 }

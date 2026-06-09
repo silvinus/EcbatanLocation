@@ -1,6 +1,6 @@
 using MediatR;
 using PlanningLocation.Application.Behaviors;
-using PlanningLocation.Domain.Enums;
+using PlanningLocation.Application.DTOs;
 
 namespace PlanningLocation.Application.Commands.UpdateReservation;
 
@@ -10,6 +10,4 @@ public record UpdateReservationCommand(
     DateOnly StartDate,
     DateOnly EndDate,
     string TenantName,
-    int AdultCount,
-    int ChildrenUnder3Count,
-    ClientType ClientType) : IRequest, IRequireAuthorization;
+    IReadOnlyList<PersonLineDto> PersonLines) : IRequest, IRequireAuthorization;

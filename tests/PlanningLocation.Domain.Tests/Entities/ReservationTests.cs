@@ -16,9 +16,10 @@ public class ReservationTests
         int capacity = 6,
         ClientType clientType = ClientType.Acquaintance)
     {
+        var lines = new[] { new PersonLine(clientType, adultCount, childrenCount) };
         return Reservation.Create(
             StudioId, OwnerId, Dates,
-            "Dupont", adultCount, childrenCount, clientType, capacity);
+            "Dupont", lines, capacity);
     }
 
     [Fact]
@@ -28,7 +29,7 @@ public class ReservationTests
 
         Assert.Equal(ReservationStatus.Pending, reservation.Status);
         Assert.Equal("Dupont", reservation.TenantName);
-        Assert.Equal(2, reservation.AdultCount);
+        Assert.Equal(2, reservation.TotalAdultCount);
     }
 
     [Fact]
@@ -62,8 +63,45 @@ public class ReservationTests
     [Fact]
     public void Create_EmptyName_Throws()
     {
+        var lines = new[] { new PersonLine(ClientType.Acquaintance, 2, 0) };
         Assert.Throws<ArgumentException>(() =>
-            Reservation.Create(StudioId, OwnerId, Dates, "", 2, 0, ClientType.Acquaintance, 6));
+            Reservation.Create(StudioId, OwnerId, Dates, "", lines, 6));
+    }
+
+    [Fact]
+    public void Create_MultiplePersonLines_SumsCorrectly()
+    {
+        var lines = new[]
+        {
+            new PersonLine(ClientType.Owner, 2, 0),
+            new PersonLine(ClientType.GuestWithPresence, 1, 1),
+            new PersonLine(ClientType.Acquaintance, 0, 2)
+        };
+        var reservation = Reservation.Create(StudioId, OwnerId, Dates, "Dupont", lines, 6);
+
+        Assert.Equal(3, reservation.PersonLines.Count);
+        Assert.Equal(3, reservation.TotalAdultCount);
+        Assert.Equal(3, reservation.TotalChildrenUnder3Count);
+        Assert.Equal(6, reservation.TotalPersonCount);
+    }
+
+    [Fact]
+    public void Create_MultipleLines_CapacityExceeded_Throws()
+    {
+        var lines = new[]
+        {
+            new PersonLine(ClientType.Owner, 3, 0),
+            new PersonLine(ClientType.GuestWithPresence, 2, 2)
+        };
+        Assert.Throws<InvalidOperationException>(() =>
+            Reservation.Create(StudioId, OwnerId, Dates, "Dupont", lines, 6));
+    }
+
+    [Fact]
+    public void Create_EmptyLines_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            Reservation.Create(StudioId, OwnerId, Dates, "Dupont", Array.Empty<PersonLine>(), 6));
     }
 
     [Fact]
@@ -115,9 +153,10 @@ public class ReservationTests
     {
         var reservation = CreateReservation(adultCount: 2, capacity: 6);
         var newDates = new DateRange(new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 5));
+        var lines = new[] { new PersonLine(ClientType.Acquaintance, 5, 3) };
 
         Assert.Throws<InvalidOperationException>(() =>
-            reservation.Update(newDates, "Martin", 5, 3, ClientType.Acquaintance, 6));
+            reservation.Update(newDates, "Martin", lines, 6));
     }
 
     [Fact]
@@ -125,13 +164,17 @@ public class ReservationTests
     {
         var reservation = CreateReservation();
         var newDates = new DateRange(new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 5));
+        var lines = new[]
+        {
+            new PersonLine(ClientType.GuestWithPresence, 3, 1)
+        };
 
-        reservation.Update(newDates, "Martin", 3, 1, ClientType.GuestWithPresence, 6);
+        reservation.Update(newDates, "Martin", lines, 6);
 
         Assert.Equal("Martin", reservation.TenantName);
-        Assert.Equal(3, reservation.AdultCount);
-        Assert.Equal(1, reservation.ChildrenUnder3Count);
-        Assert.Equal(ClientType.GuestWithPresence, reservation.ClientType);
+        Assert.Equal(3, reservation.TotalAdultCount);
+        Assert.Equal(1, reservation.TotalChildrenUnder3Count);
+        Assert.Single(reservation.PersonLines);
         Assert.NotNull(reservation.UpdatedAt);
     }
 

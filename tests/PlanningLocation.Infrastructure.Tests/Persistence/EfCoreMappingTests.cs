@@ -15,7 +15,8 @@ public class EfCoreMappingTests : IDisposable
         var studio = Studio.Create("Villa", 6, true, true, 1);
         var owner = Owner.Create("Léa", "u1");
         var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
-        var reservation = Reservation.Create(studio.Id, owner.Id, dates, "Test", 2, 0, ClientType.Owner, 6);
+        var lines = new[] { new PersonLine(ClientType.Owner, 2, 0) };
+        var reservation = Reservation.Create(studio.Id, owner.Id, dates, "Test", lines, 6);
 
         await using (var ctx = _factory.CreateContext())
         {
@@ -34,12 +35,43 @@ public class EfCoreMappingTests : IDisposable
     }
 
     [Fact]
+    public async Task PersonLines_OwnedCollection_PersistsAndLoads()
+    {
+        var studio = Studio.Create("Villa", 6, true, true, 1);
+        var owner = Owner.Create("Léa", "u1");
+        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var lines = new[]
+        {
+            new PersonLine(ClientType.Owner, 2, 0),
+            new PersonLine(ClientType.Acquaintance, 1, 1)
+        };
+        var reservation = Reservation.Create(studio.Id, owner.Id, dates, "Test", lines, 6);
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            ctx.Studios.Add(studio);
+            ctx.Owners.Add(owner);
+            ctx.Reservations.Add(reservation);
+            await ctx.SaveChangesAsync();
+        }
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            var loaded = await ctx.Reservations.FirstAsync();
+            Assert.Equal(2, loaded.PersonLines.Count);
+            Assert.Equal(3, loaded.TotalAdultCount);
+            Assert.Equal(1, loaded.TotalChildrenUnder3Count);
+        }
+    }
+
+    [Fact]
     public async Task EnumConversions_StoredAsStrings()
     {
         var studio = Studio.Create("Villa", 6, true, true, 1);
         var owner = Owner.Create("Léa", "u1");
         var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
-        var reservation = Reservation.Create(studio.Id, owner.Id, dates, "Test", 2, 0, ClientType.Acquaintance, 6);
+        var lines = new[] { new PersonLine(ClientType.Acquaintance, 2, 0) };
+        var reservation = Reservation.Create(studio.Id, owner.Id, dates, "Test", lines, 6);
 
         await using (var ctx = _factory.CreateContext())
         {
@@ -52,7 +84,7 @@ public class EfCoreMappingTests : IDisposable
         await using (var ctx = _factory.CreateContext())
         {
             var raw = await ctx.Database.SqlQueryRaw<string>(
-                "SELECT ClientType AS Value FROM Reservations LIMIT 1").FirstAsync();
+                "SELECT ClientType AS Value FROM ReservationPersonLines LIMIT 1").FirstAsync();
             Assert.Equal("Acquaintance", raw);
 
             var rawStatus = await ctx.Database.SqlQueryRaw<string>(

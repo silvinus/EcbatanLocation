@@ -10,9 +10,8 @@ public class Reservation
     public Guid OwnerId { get; private set; }
     public DateRange Dates { get; private set; } = default!;
     public string TenantName { get; private set; } = default!;
-    public int AdultCount { get; private set; }
-    public int ChildrenUnder3Count { get; private set; }
-    public ClientType ClientType { get; private set; }
+    private List<PersonLine> _personLines = [];
+    public IReadOnlyCollection<PersonLine> PersonLines => _personLines.AsReadOnly();
     public ReservationStatus Status { get; private set; }
     public string? AcceptedBy { get; private set; }
     public DateTime? AcceptedAt { get; private set; }
@@ -28,20 +27,14 @@ public class Reservation
         Guid ownerId,
         DateRange dates,
         string tenantName,
-        int adultCount,
-        int childrenUnder3Count,
-        ClientType clientType,
+        IEnumerable<PersonLine> personLines,
         int studioCapacity)
     {
-        if (adultCount < 1)
-            throw new ArgumentException("At least one adult is required.");
-        if (childrenUnder3Count < 0)
-            throw new ArgumentException("Children count cannot be negative.");
         if (string.IsNullOrWhiteSpace(tenantName))
             throw new ArgumentException("Tenant name is required.");
-        if (adultCount + childrenUnder3Count > studioCapacity)
-            throw new InvalidOperationException(
-                $"Capacity exceeded: {adultCount + childrenUnder3Count} persons for a capacity of {studioCapacity}.");
+
+        var lines = personLines.ToList();
+        ValidatePersonLines(lines, studioCapacity);
 
         return new Reservation
         {
@@ -50,9 +43,7 @@ public class Reservation
             OwnerId = ownerId,
             Dates = dates,
             TenantName = tenantName,
-            AdultCount = adultCount,
-            ChildrenUnder3Count = childrenUnder3Count,
-            ClientType = clientType,
+            _personLines = lines,
             Status = ReservationStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
@@ -83,26 +74,39 @@ public class Reservation
     public void Update(
         DateRange dates,
         string tenantName,
-        int adultCount,
-        int childrenUnder3Count,
-        ClientType clientType,
+        IEnumerable<PersonLine> personLines,
         int studioCapacity)
     {
-        if (adultCount < 1)
-            throw new ArgumentException("At least one adult is required.");
-        if (childrenUnder3Count < 0)
-            throw new ArgumentException("Children count cannot be negative.");
-        if (adultCount + childrenUnder3Count > studioCapacity)
-            throw new InvalidOperationException(
-                $"Capacity exceeded: {adultCount + childrenUnder3Count} persons for a capacity of {studioCapacity}.");
+        var lines = personLines.ToList();
+        ValidatePersonLines(lines, studioCapacity);
 
         Dates = dates;
         TenantName = tenantName;
-        AdultCount = adultCount;
-        ChildrenUnder3Count = childrenUnder3Count;
-        ClientType = clientType;
+        _personLines = lines;
         UpdatedAt = DateTime.UtcNow;
     }
 
-    public int TotalPersonCount => AdultCount + ChildrenUnder3Count;
+    public int TotalPersonCount => _personLines.Sum(l => l.TotalPersons);
+    public int TotalAdultCount => _personLines.Sum(l => l.AdultCount);
+    public int TotalChildrenUnder3Count => _personLines.Sum(l => l.ChildrenUnder3Count);
+
+    private static void ValidatePersonLines(List<PersonLine> lines, int studioCapacity)
+    {
+        if (lines.Count == 0)
+            throw new ArgumentException("At least one person line is required.");
+
+        if (lines.Any(l => l.AdultCount < 0))
+            throw new ArgumentException("Adult count cannot be negative.");
+        if (lines.Any(l => l.ChildrenUnder3Count < 0))
+            throw new ArgumentException("Children count cannot be negative.");
+
+        var totalAdults = lines.Sum(l => l.AdultCount);
+        if (totalAdults < 1)
+            throw new ArgumentException("At least one adult is required.");
+
+        var totalPersons = lines.Sum(l => l.TotalPersons);
+        if (totalPersons > studioCapacity)
+            throw new InvalidOperationException(
+                $"Capacity exceeded: {totalPersons} persons for a capacity of {studioCapacity}.");
+    }
 }

@@ -23,11 +23,18 @@ public class ReservationRepositoryTests : IDisposable
         _ownerId = owner.Id;
     }
 
+    private static Reservation MakeReservation(Guid studioId, Guid ownerId, DateRange dates,
+        string tenant = "Dupont", int adults = 2, int children = 0, ClientType type = ClientType.Owner, int capacity = 6)
+    {
+        var lines = new[] { new PersonLine(type, adults, children) };
+        return Reservation.Create(studioId, ownerId, dates, tenant, lines, capacity);
+    }
+
     [Fact]
     public async Task AddAsync_And_GetByIdAsync_RoundTrips()
     {
         var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
-        var reservation = Reservation.Create(_studioId, _ownerId, dates, "Dupont", 2, 1, ClientType.Owner, 6);
+        var reservation = MakeReservation(_studioId, _ownerId, dates, adults: 2, children: 1);
 
         await using (var ctx = _factory.CreateContext())
         {
@@ -44,6 +51,7 @@ public class ReservationRepositoryTests : IDisposable
             Assert.Equal(new DateOnly(2026, 7, 1), loaded.Dates.StartDate);
             Assert.Equal(new DateOnly(2026, 7, 8), loaded.Dates.EndDate);
             Assert.Equal(ReservationStatus.Pending, loaded.Status);
+            Assert.Single(loaded.PersonLines);
         }
     }
 
@@ -51,7 +59,7 @@ public class ReservationRepositoryTests : IDisposable
     public async Task ExistsOverlapAsync_DetectsOverlap()
     {
         var dates = new DateRange(new DateOnly(2026, 7, 5), new DateOnly(2026, 7, 12));
-        var reservation = Reservation.Create(_studioId, _ownerId, dates, "Martin", 2, 0, ClientType.Acquaintance, 6);
+        var reservation = MakeReservation(_studioId, _ownerId, dates, "Martin", type: ClientType.Acquaintance);
 
         await using (var ctx = _factory.CreateContext())
         {
@@ -75,7 +83,7 @@ public class ReservationRepositoryTests : IDisposable
     public async Task ExistsOverlapAsync_ExcludesSpecifiedReservation()
     {
         var dates = new DateRange(new DateOnly(2026, 8, 1), new DateOnly(2026, 8, 8));
-        var reservation = Reservation.Create(_studioId, _ownerId, dates, "Durand", 1, 0, ClientType.Owner, 6);
+        var reservation = MakeReservation(_studioId, _ownerId, dates, "Durand", adults: 1);
 
         await using (var ctx = _factory.CreateContext())
         {
@@ -101,19 +109,19 @@ public class ReservationRepositoryTests : IDisposable
         await using (var ctx = _factory.CreateContext())
         {
             var repo = new ReservationRepository(ctx);
-            await repo.AddAsync(Reservation.Create(_studioId, _ownerId, july, "A", 1, 0, ClientType.Owner, 6));
-            await repo.AddAsync(Reservation.Create(_studioId, _ownerId, august, "B", 1, 0, ClientType.Owner, 6));
-            await repo.AddAsync(Reservation.Create(_studioId, _ownerId, crossMonth, "C", 1, 0, ClientType.Owner, 6));
+            await repo.AddAsync(MakeReservation(_studioId, _ownerId, july, "A", adults: 1));
+            await repo.AddAsync(MakeReservation(_studioId, _ownerId, august, "B", adults: 1));
+            await repo.AddAsync(MakeReservation(_studioId, _ownerId, crossMonth, "C", adults: 1));
         }
 
         await using (var ctx = _factory.CreateContext())
         {
             var repo = new ReservationRepository(ctx);
             var julyResults = await repo.GetByMonthAsync(2026, 7);
-            Assert.Equal(2, julyResults.Count); // july + crossMonth
+            Assert.Equal(2, julyResults.Count);
 
             var augustResults = await repo.GetByMonthAsync(2026, 8);
-            Assert.Equal(2, augustResults.Count); // august + crossMonth
+            Assert.Equal(2, augustResults.Count);
         }
     }
 
@@ -121,7 +129,7 @@ public class ReservationRepositoryTests : IDisposable
     public async Task UpdateAsync_PersistsChanges()
     {
         var dates = new DateRange(new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 5));
-        var reservation = Reservation.Create(_studioId, _ownerId, dates, "Original", 2, 0, ClientType.Owner, 6);
+        var reservation = MakeReservation(_studioId, _ownerId, dates, "Original");
 
         await using (var ctx = _factory.CreateContext())
         {
@@ -136,7 +144,8 @@ public class ReservationRepositoryTests : IDisposable
             Assert.NotNull(loaded);
 
             var newDates = new DateRange(new DateOnly(2026, 9, 2), new DateOnly(2026, 9, 8));
-            loaded.Update(newDates, "Updated", 3, 1, ClientType.Acquaintance, 6);
+            var newLines = new[] { new PersonLine(ClientType.Acquaintance, 3, 1) };
+            loaded.Update(newDates, "Updated", newLines, 6);
             await repo.UpdateAsync(loaded);
         }
 
@@ -146,7 +155,7 @@ public class ReservationRepositoryTests : IDisposable
             var reloaded = await repo.GetByIdAsync(reservation.Id);
             Assert.NotNull(reloaded);
             Assert.Equal("Updated", reloaded.TenantName);
-            Assert.Equal(3, reloaded.AdultCount);
+            Assert.Equal(3, reloaded.TotalAdultCount);
             Assert.Equal(new DateOnly(2026, 9, 2), reloaded.Dates.StartDate);
         }
     }
@@ -155,7 +164,7 @@ public class ReservationRepositoryTests : IDisposable
     public async Task DeleteAsync_RemovesReservation()
     {
         var dates = new DateRange(new DateOnly(2026, 10, 1), new DateOnly(2026, 10, 5));
-        var reservation = Reservation.Create(_studioId, _ownerId, dates, "ToDelete", 1, 0, ClientType.Owner, 6);
+        var reservation = MakeReservation(_studioId, _ownerId, dates, "ToDelete", adults: 1);
 
         await using (var ctx = _factory.CreateContext())
         {
@@ -180,7 +189,7 @@ public class ReservationRepositoryTests : IDisposable
     public async Task GetByDateAsync_ReturnsActiveReservationsForDay()
     {
         var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
-        var reservation = Reservation.Create(_studioId, _ownerId, dates, "Test", 2, 0, ClientType.Owner, 6);
+        var reservation = MakeReservation(_studioId, _ownerId, dates, "Test");
 
         await using (var ctx = _factory.CreateContext())
         {
@@ -195,7 +204,6 @@ public class ReservationRepositoryTests : IDisposable
             var inRange = await repo.GetByDateAsync(new DateOnly(2026, 7, 5));
             Assert.Single(inRange);
 
-            // Departure day is excluded (H3)
             var departureDay = await repo.GetByDateAsync(new DateOnly(2026, 7, 10));
             Assert.Empty(departureDay);
 
@@ -216,8 +224,8 @@ public class ReservationRepositoryTests : IDisposable
 
         var dates1 = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
         var dates2 = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
-        var r1 = Reservation.Create(_studioId, _ownerId, dates1, "ByOwner1", 1, 0, ClientType.Owner, 6);
-        var r2 = Reservation.Create(_studioId, owner2.Id, dates2, "ByOwner2", 1, 0, ClientType.Owner, 6);
+        var r1 = MakeReservation(_studioId, _ownerId, dates1, "ByOwner1", adults: 1);
+        var r2 = MakeReservation(_studioId, owner2.Id, dates2, "ByOwner2", adults: 1);
 
         await using (var ctx = _factory.CreateContext())
         {

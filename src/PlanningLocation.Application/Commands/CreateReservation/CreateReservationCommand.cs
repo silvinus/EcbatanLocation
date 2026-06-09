@@ -1,6 +1,6 @@
 using MediatR;
 using PlanningLocation.Application.Behaviors;
-using PlanningLocation.Domain.Enums;
+using PlanningLocation.Application.DTOs;
 
 namespace PlanningLocation.Application.Commands.CreateReservation;
 
@@ -10,6 +10,4 @@ public record CreateReservationCommand(
     DateOnly StartDate,
     DateOnly EndDate,
     string TenantName,
-    int AdultCount,
-    int ChildrenUnder3Count,
-    ClientType ClientType) : IRequest<Guid>, IRequireAuthorization;
+    IReadOnlyList<PersonLineDto> PersonLines) : IRequest<Guid>, IRequireAuthorization;

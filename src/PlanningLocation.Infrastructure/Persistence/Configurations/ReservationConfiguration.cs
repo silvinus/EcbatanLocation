@@ -17,12 +17,25 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         });
 
         builder.Property(r => r.TenantName).IsRequired().HasMaxLength(200);
-        builder.Property(r => r.AdultCount).IsRequired();
-        builder.Property(r => r.ChildrenUnder3Count).IsRequired();
-        builder.Property(r => r.ClientType).IsRequired().HasConversion<string>().HasMaxLength(50);
         builder.Property(r => r.Status).IsRequired().HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.AcceptedBy).HasMaxLength(200);
         builder.Property(r => r.ConfirmedBy).HasMaxLength(200);
+
+        builder.OwnsMany(r => r.PersonLines, pl =>
+        {
+            pl.ToTable("ReservationPersonLines");
+            pl.WithOwner().HasForeignKey("ReservationId");
+            pl.Property<int>("Id").ValueGeneratedOnAdd();
+            pl.HasKey("Id");
+            pl.Property(p => p.ClientType).IsRequired().HasConversion<string>().HasMaxLength(50);
+            pl.Property(p => p.AdultCount).IsRequired();
+            pl.Property(p => p.ChildrenUnder3Count).IsRequired();
+            pl.Ignore(p => p.TotalPersons);
+        });
+
+        builder.Ignore(r => r.TotalPersonCount);
+        builder.Ignore(r => r.TotalAdultCount);
+        builder.Ignore(r => r.TotalChildrenUnder3Count);
 
         builder.HasIndex(r => r.StudioId);
         builder.HasIndex(r => new { r.StudioId, r.Status });

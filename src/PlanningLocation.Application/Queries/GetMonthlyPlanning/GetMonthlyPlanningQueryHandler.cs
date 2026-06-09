@@ -47,9 +47,7 @@ public class GetMonthlyPlanningQueryHandler(
                         r.Dates.StartDate,
                         r.Dates.EndDate,
                         r.Status,
-                        r.ClientType,
-                        r.AdultCount,
-                        r.ChildrenUnder3Count)).ToList()
+                        r.PersonLines.Select(pl => new PersonLineDto(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count)).ToList())).ToList()
                     : []))
             .ToList();
 

@@ -29,14 +29,16 @@ public class CreateReservationCommandHandler(
             domainService.ValidateStudioDependency(studio, request.OwnerId, dates, ownerReservations);
         }
 
+        var personLines = request.PersonLines
+            .Select(pl => new PersonLine(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count))
+            .ToList();
+
         var reservation = Reservation.Create(
             request.StudioId,
             request.OwnerId,
             dates,
             request.TenantName,
-            request.AdultCount,
-            request.ChildrenUnder3Count,
-            request.ClientType,
+            personLines,
             studio.Capacity);
 
         await reservationRepository.AddAsync(reservation, cancellationToken);

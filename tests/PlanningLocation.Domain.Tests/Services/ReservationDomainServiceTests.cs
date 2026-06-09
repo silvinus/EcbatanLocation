@@ -16,9 +16,10 @@ public class ReservationDomainServiceTests
 
     private static Reservation CreateReservation(Guid studioId, Guid ownerId, DateRange dates)
     {
+        var lines = new[] { new PersonLine(ClientType.Acquaintance, 2, 0) };
         return Reservation.Create(
             studioId, ownerId, dates,
-            "Dupont", 2, 0, ClientType.Acquaintance, 6);
+            "Dupont", lines, 6);
     }
 
     // --- ValidateStudioDependency (H1) ---

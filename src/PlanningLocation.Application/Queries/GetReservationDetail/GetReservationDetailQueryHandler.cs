@@ -23,11 +23,19 @@ public class GetReservationDetailQueryHandler(
         var pricingGrid = await pricingGridRepository.GetByYearAsync(reservation.Dates.StartDate.Year, cancellationToken);
         if (pricingGrid is not null)
         {
-            var rate = pricingGrid.GetRate(reservation.ClientType);
             var days = reservation.Dates.NumberOfDays;
-            var childRate = reservation.ClientType == ClientType.Acquaintance ? rate * 0.5m : rate;
-            estimatedAmount = (reservation.AdultCount * rate + reservation.ChildrenUnder3Count * childRate) * days;
+            estimatedAmount = 0m;
+            foreach (var line in reservation.PersonLines)
+            {
+                var rate = pricingGrid.GetRate(line.ClientType);
+                var childRate = line.ClientType == ClientType.Acquaintance ? rate * 0.5m : rate;
+                estimatedAmount += (line.AdultCount * rate + line.ChildrenUnder3Count * childRate) * days;
+            }
         }
+
+        var personLineDtos = reservation.PersonLines
+            .Select(pl => new PersonLineDto(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count))
+            .ToList();
 
         return new ReservationDetailDto(
             reservation.Id,
@@ -41,9 +49,7 @@ public class GetReservationDetailQueryHandler(
             reservation.Dates.EndDate,
             reservation.Dates.NumberOfDays,
             reservation.TenantName,
-            reservation.AdultCount,
-            reservation.ChildrenUnder3Count,
-            reservation.ClientType,
+            personLineDtos,
             reservation.Status,
             reservation.AcceptedBy,
             reservation.AcceptedAt,

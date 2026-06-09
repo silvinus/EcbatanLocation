@@ -62,7 +62,7 @@
                             <div class="booking-span @GetStatusClass(res.Status) @(roundLeft ? "round-left" : "") @(roundRight ? "round-right" : "")">
                                 <span class="span-name">@res.TenantName</span>
                                 <span class="span-owner">@res.OwnerName</span>
-                                <span class="span-count">@res.AdultCount ad.@(res.ChildrenUnder3Count > 0 ? $" +{res.ChildrenUnder3Count}" : "")</span>
+                                <span class="span-count">@res.PersonLines.Sum(l => l.AdultCount) ad.@(res.PersonLines.Sum(l => l.ChildrenUnder3Count) > 0 ? $" +{res.PersonLines.Sum(l => l.ChildrenUnder3Count)}" : "")</span>
                             </div>
                         </td>
                     }

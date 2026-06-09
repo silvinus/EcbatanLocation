@@ -2,8 +2,8 @@
     <div class="who">@Reservation.TenantName</div>
     <div class="owner">@Reservation.OwnerName</div>
     <div class="sub">
-        <span>@Reservation.AdultCount ad.</span>
-        <span>@Reservation.ChildrenUnder3Count &lt;3a</span>
+        <span>@Reservation.PersonLines.Sum(l => l.AdultCount) ad.</span>
+        <span>@Reservation.PersonLines.Sum(l => l.ChildrenUnder3Count) &lt;3a</span>
         <span class="badge">@GetStatusLabel()</span>
     </div>
 </div>

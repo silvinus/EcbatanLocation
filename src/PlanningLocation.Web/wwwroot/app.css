@@ -491,3 +491,18 @@ header {
     color: white;
 }
 .blazor-error-boundary::after { content: "An error has occurred."; }
+
+/* Person lines in reservation form */
+.person-lines { display: flex; flex-direction: column; gap: 8px; }
+.person-line-row {
+    display: flex; gap: 8px; align-items: center;
+}
+.person-line-row .field { margin: 0; }
+.person-line-row select, .person-line-row input {
+    background: rgba(0,0,0,.22); border: 1px solid var(--line); color: var(--txt);
+    padding: 8px; border-radius: 10px; font-size: 13px; outline: none;
+    font-family: var(--sans); width: 100%;
+}
+.person-line-row select option { background: #0f1a30; color: var(--txt); }
+.person-line-row select:focus, .person-line-row input:focus { border-color: var(--brand); }
+.person-line-row select:disabled { opacity: .6; cursor: not-allowed; }

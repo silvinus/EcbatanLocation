@@ -47,7 +47,7 @@ else
                         <span>&bull;</span>
                         <span>@nights nuit(s)</span>
                         <span>&bull;</span>
-                        <span>@res.AdultCount ad. @res.ChildrenUnder3Count enf.</span>
+                        <span>@res.PersonLines.Sum(l => l.AdultCount) ad. @res.PersonLines.Sum(l => l.ChildrenUnder3Count) enf.</span>
                     </div>
                     <div class="owner">@res.OwnerName</div>
                 </div>

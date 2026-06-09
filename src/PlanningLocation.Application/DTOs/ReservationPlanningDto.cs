@@ -10,6 +10,4 @@ public record ReservationPlanningDto(
     DateOnly StartDate,
     DateOnly EndDate,
     ReservationStatus Status,
-    ClientType ClientType,
-    int AdultCount,
-    int ChildrenUnder3Count);
+    IReadOnlyList<PersonLineDto> PersonLines);
