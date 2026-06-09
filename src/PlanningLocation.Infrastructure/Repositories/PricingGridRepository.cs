@@ -20,7 +20,12 @@ public class PricingGridRepository(PlanningLocationDbContext context) : IPricing
 
     public async Task UpdateAsync(PricingGrid grid, CancellationToken ct = default)
     {
-        context.PricingGrids.Update(grid);
+        var oldLines = await context.PricingLines
+            .Where(l => l.PricingGridId == grid.Id)
+            .ToListAsync(ct);
+        context.PricingLines.RemoveRange(oldLines);
+        context.PricingLines.AddRange(grid.Lines);
+
         await context.SaveChangesAsync(ct);
     }
 }
