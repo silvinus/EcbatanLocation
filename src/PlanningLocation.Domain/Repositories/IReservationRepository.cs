@@ -11,4 +11,6 @@ public interface IReservationRepository
     Task AddAsync(Reservation reservation, CancellationToken ct = default);
     Task UpdateAsync(Reservation reservation, CancellationToken ct = default);
     Task DeleteAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<Reservation>> GetByOwnerAndOverlappingDatesAsync(Guid ownerId, DateRange dates, CancellationToken ct = default);
+    Task<IReadOnlyList<Reservation>> GetByDateAsync(DateOnly date, CancellationToken ct = default);
 }

@@ -58,4 +58,20 @@ public class ReservationRepository(PlanningLocationDbContext context) : IReserva
             await context.SaveChangesAsync(ct);
         }
     }
+
+    public async Task<IReadOnlyList<Reservation>> GetByOwnerAndOverlappingDatesAsync(
+        Guid ownerId, DateRange dates, CancellationToken ct = default)
+    {
+        return await context.Reservations
+            .Where(r => r.OwnerId == ownerId)
+            .Where(r => r.Dates.StartDate < dates.EndDate && r.Dates.EndDate > dates.StartDate)
+            .ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Reservation>> GetByDateAsync(DateOnly date, CancellationToken ct = default)
+    {
+        return await context.Reservations
+            .Where(r => r.Dates.StartDate <= date && r.Dates.EndDate > date)
+            .ToListAsync(ct);
+    }
 }
