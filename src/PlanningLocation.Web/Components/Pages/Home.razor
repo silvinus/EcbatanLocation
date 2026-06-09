@@ -20,11 +20,15 @@
                             SelectedStatus="@SelectedStatus"
                             SelectedOwnerId="@SelectedOwnerId"
                             SelectedDate="@_selectedDate"
+                            RangeStart="@_rangeStart"
+                            RangeEnd="@_rangeEnd"
                             Occupation="@_occupation"
+                            RangeOccupation="@_rangeOccupation"
                             OnYearMonthChanged="OnYearMonthChanged"
                             OnStudioChanged="OnStudioChanged"
                             OnStatusChanged="OnStatusChanged"
-                            OnOwnerChanged="OnOwnerChanged" />
+                            OnOwnerChanged="OnOwnerChanged"
+                            OnClearRange="ClearRange" />
         </div>
     </aside>
 
@@ -60,6 +64,8 @@
                                   Year="@Year"
                                   Month="@Month"
                                   SelectedDate="@_selectedDate"
+                                  RangeStart="@_rangeStart"
+                                  RangeEnd="@_rangeEnd"
                                   OnDaySelected="OnDaySelected"
                                   OnReservationClicked="OnReservationClicked" />
                 }
@@ -122,7 +128,10 @@
     private IReadOnlyList<StudioDto>? _studios;
     private IReadOnlyList<OwnerDto>? _owners;
     private DateOnly? _selectedDate;
+    private DateOnly? _rangeStart;
+    private DateOnly? _rangeEnd;
     private OccupationJourDto? _occupation;
+    private OccupationRangeDto? _rangeOccupation;
     private ReservationDetailDto? _selectedReservation;
 
     private bool _isAuthenticated;
@@ -196,25 +205,29 @@
     {
         if (Month == 1) { Month = 12; Year--; }
         else { Month--; }
-        _selectedDate = null;
-        await LoadPlanning();
-        await LoadOccupation();
+        await ResetSelectionAndReload();
     }
 
     private async Task NextMonth()
     {
         if (Month == 12) { Month = 1; Year++; }
         else { Month++; }
-        _selectedDate = null;
-        await LoadPlanning();
-        await LoadOccupation();
+        await ResetSelectionAndReload();
     }
 
     private async Task OnYearMonthChanged((int year, int month) value)
     {
         Year = value.year;
         Month = value.month;
+        await ResetSelectionAndReload();
+    }
+
+    private async Task ResetSelectionAndReload()
+    {
         _selectedDate = null;
+        _rangeStart = null;
+        _rangeEnd = null;
+        _rangeOccupation = null;
         await LoadPlanning();
         await LoadOccupation();
     }
@@ -240,7 +253,52 @@
     private async Task OnDaySelected(DateOnly date)
     {
         _selectedDate = date;
+
+        if (_rangeStart is null || _rangeEnd is not null)
+        {
+            _rangeStart = date;
+            _rangeEnd = null;
+            _rangeOccupation = null;
+            await LoadOccupation();
+        }
+        else
+        {
+            if (date < _rangeStart)
+            {
+                _rangeEnd = _rangeStart;
+                _rangeStart = date;
+            }
+            else if (date == _rangeStart)
+            {
+                _rangeStart = null;
+                _rangeOccupation = null;
+                await LoadOccupation();
+                return;
+            }
+            else
+            {
+                _rangeEnd = date;
+            }
+            await LoadRangeOccupation();
+        }
+    }
+
+    private async Task ClearRange()
+    {
+        _rangeStart = null;
+        _rangeEnd = null;
+        _rangeOccupation = null;
         await LoadOccupation();
+    }
+
+    private async Task LoadRangeOccupation()
+    {
+        if (_rangeStart.HasValue && _rangeEnd.HasValue)
+        {
+            _rangeOccupation = await Mediator.Send(
+                new PlanningLocation.Application.Queries.GetRangeOccupation.GetRangeOccupationQuery(
+                    _rangeStart.Value, _rangeEnd.Value));
+        }
     }
 
     private async Task OnReservationClicked(Guid reservationId)
@@ -280,6 +338,7 @@
         _selectedReservation = null;
         await LoadPlanning();
         await LoadOccupation();
+        await LoadRangeOccupation();
     }
 
     private void OpenDeleteModal(ReservationDetailDto reservation)
@@ -302,6 +361,7 @@
         _selectedReservation = null;
         await LoadPlanning();
         await LoadOccupation();
+        await LoadRangeOccupation();
     }
 
     private async Task OnReservationStatusChanged()
@@ -314,6 +374,7 @@
         }
         await LoadPlanning();
         await LoadOccupation();
+        await LoadRangeOccupation();
     }
 
     private void SwitchToWeekView()

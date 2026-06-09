@@ -1,6 +1,8 @@
 @{
     var daysInMonth = DateTime.DaysInMonth(Year, Month);
     var today = DateOnly.FromDateTime(DateTime.Today);
+    var monthStart = new DateOnly(Year, Month, 1);
+    var monthEnd = new DateOnly(Year, Month, daysInMonth);
 }
 
 <table aria-label="planning">
@@ -14,7 +16,7 @@
                 var isSelected = date == SelectedDate;
                 var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
                 var dayNum = d;
-                <th class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "")">
+                <th class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(IsInRange(date) ? "in-range" : "")">
                     <span class="day-header @(isToday ? "today" : "") @(isWeekend ? "weekend" : "")"
                           @onclick="() => OnDayClicked(date)">
                         @dayNum
@@ -26,6 +28,8 @@
     <tbody>
         @foreach (var studioPlan in Planning.Studios)
         {
+            var spans = BuildSpans(studioPlan.Reservations, monthStart, monthEnd, daysInMonth);
+
             <tr>
                 <td class="studio-col">
                     <div class="studio-name">@studioPlan.Studio.Name</div>
@@ -41,19 +45,33 @@
                     var date = new DateOnly(Year, Month, d);
                     var isToday = date == today;
                     var isSelected = date == SelectedDate;
-                    var dayReservations = GetReservationsForDay(studioPlan.Reservations, date);
-                    <td class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "")">
-                        <div class="cell">
-                            @foreach (var res in dayReservations)
-                            {
-                                if (IsInRange(res, date))
-                                {
-                                    <ReservationCell Reservation="@res"
-                                                     OnClick="() => OnReservationClick(res.Id)" />
-                                }
-                            }
-                        </div>
-                    </td>
+
+                    var inRange = IsInRange(date);
+                    var span = spans.FirstOrDefault(s => s.StartDay == d);
+                    if (span is not null)
+                    {
+                        var res = span.Reservation;
+                        var startsBeforeMonth = res.StartDate < monthStart;
+                        var endsAfterMonth = res.EndDate > monthEnd.AddDays(1);
+                        var roundLeft = !startsBeforeMonth;
+                        var roundRight = !endsAfterMonth;
+
+                        <td colspan="@span.ColSpan"
+                            class="day-col bar-cell @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(inRange ? "in-range" : "")"
+                            @onclick="() => OnReservationClick(res.Id)">
+                            <div class="booking-span @GetStatusClass(res.Status) @(roundLeft ? "round-left" : "") @(roundRight ? "round-right" : "")">
+                                <span class="span-name">@res.TenantName</span>
+                                <span class="span-owner">@res.OwnerName</span>
+                                <span class="span-count">@res.AdultCount ad.@(res.ChildrenUnder3Count > 0 ? $" +{res.ChildrenUnder3Count}" : "")</span>
+                            </div>
+                        </td>
+                    }
+                    else if (!spans.Any(s => d > s.StartDay && d < s.StartDay + s.ColSpan))
+                    {
+                        <td class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(inRange ? "in-range" : "")"
+                            @onclick="() => OnDayClicked(date)">
+                        </td>
+                    }
                 }
             </tr>
         }
@@ -65,26 +83,52 @@
     [Parameter] public int Year { get; set; }
     [Parameter] public int Month { get; set; }
     [Parameter] public DateOnly? SelectedDate { get; set; }
+    [Parameter] public DateOnly? RangeStart { get; set; }
+    [Parameter] public DateOnly? RangeEnd { get; set; }
     [Parameter] public EventCallback<DateOnly> OnDaySelected { get; set; }
     [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
 
-    private List<ReservationPlanningDto> GetReservationsForDay(
-        IReadOnlyList<ReservationPlanningDto> reservations, DateOnly date)
+    private bool IsInRange(DateOnly date)
     {
-        return reservations
-            .Where(r => r.StartDate <= date && r.EndDate > date)
-            .ToList();
+        if (RangeStart is null) return false;
+        if (RangeEnd is null) return date == RangeStart;
+        return date >= RangeStart && date <= RangeEnd;
     }
 
-    private bool IsInRange(ReservationPlanningDto reservation, DateOnly date)
+    private record SpanInfo(int StartDay, int ColSpan, ReservationPlanningDto Reservation);
+
+    private List<SpanInfo> BuildSpans(
+        IReadOnlyList<ReservationPlanningDto> reservations,
+        DateOnly monthStart, DateOnly monthEnd, int daysInMonth)
     {
-        var moreThanStart = date >= reservation.StartDate;
-        var lessThanEnd = date <= reservation.EndDate;
-        var isInRange = moreThanStart && lessThanEnd;
-        return isInRange;
-        // var monthStart = new DateOnly(Year, Month, 1);
-        // return reservation.StartDate == date || (reservation.StartDate < monthStart && date == monthStart);
+        var result = new List<SpanInfo>();
+
+        foreach (var res in reservations)
+        {
+            var visibleStart = res.StartDate < monthStart ? monthStart : res.StartDate;
+            var visibleEnd = res.EndDate > monthEnd.AddDays(1) ? monthEnd.AddDays(1) : res.EndDate;
+
+            if (visibleStart > monthEnd || visibleEnd <= monthStart)
+                continue;
+
+            var startDay = visibleStart.Day;
+            var endDay = visibleEnd <= monthEnd ? visibleEnd.Day : daysInMonth + 1;
+            var colSpan = endDay - startDay;
+
+            if (colSpan > 0)
+                result.Add(new SpanInfo(startDay, colSpan, res));
+        }
+
+        return result;
     }
+
+    private string GetStatusClass(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Pending => "st-pending",
+        ReservationStatus.Accepted => "st-accepted",
+        ReservationStatus.Confirmed => "st-confirmed",
+        _ => ""
+    };
 
     private async Task OnDayClicked(DateOnly date)
     {

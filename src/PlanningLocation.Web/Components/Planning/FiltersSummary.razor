@@ -45,6 +45,38 @@
 
 <div class="sep"></div>
 
+@if (RangeStart.HasValue && RangeEnd.HasValue && RangeOccupation is not null)
+{
+    <div class="range-indicator">
+        <div class="range-header">
+            <span class="range-label">P&#233;riode : @RangeStart.Value.ToString("dd/MM") &#8594; @RangeEnd.Value.ToString("dd/MM")</span>
+            <button class="x-small" @onclick="OnClearRange" title="R&#233;initialiser">&#x2715;</button>
+        </div>
+    </div>
+
+    <div class="kpi">
+        <div class="box">
+            <div class="big">@RangeOccupation.AverageOccupancyRate<span class="unit">%</span></div>
+            <div class="lab">Taux moyen (@RangeOccupation.DaysInRange j.)</div>
+        </div>
+        <div class="box">
+            <div class="big">@RangeOccupation.AverageOccupiedPlaces<span class="unit"> / @RangeOccupation.TotalCapacity</span></div>
+            <div class="lab">Places moy. occup&#233;es</div>
+        </div>
+    </div>
+
+    <div class="sep"></div>
+}
+else if (RangeStart.HasValue && !RangeEnd.HasValue)
+{
+    <div class="range-indicator">
+        <div class="range-header">
+            <span class="range-label hint">D&#233;but : @RangeStart.Value.ToString("dd/MM") — cliquez un 2e jour</span>
+            <button class="x-small" @onclick="OnClearRange" title="Annuler">&#x2715;</button>
+        </div>
+    </div>
+}
+
 <div class="kpi">
     <div class="box">
         @if (Occupation is not null)
@@ -55,7 +87,7 @@
         {
             <div class="big">-- / --</div>
         }
-        <div class="lab">Places occup&#233;es / total@(SelectedDate.HasValue ? $" ({SelectedDate.Value:dd/MM})" : "")</div>
+        <div class="lab">Places occup&#233;es@(SelectedDate.HasValue ? $" ({SelectedDate.Value:dd/MM})" : " (auj.)")</div>
     </div>
     <div class="box">
         @if (Occupation is not null)
@@ -66,7 +98,17 @@
         {
             <div class="big">--</div>
         }
-        <div class="lab">Studios occup&#233;s@(SelectedDate.HasValue ? $" ({SelectedDate.Value:dd/MM})" : "")</div>
+        <div class="lab">Studios occup&#233;s@(SelectedDate.HasValue ? $" ({SelectedDate.Value:dd/MM})" : " (auj.)")</div>
+    </div>
+</div>
+
+<div class="sep"></div>
+
+<div class="hint">
+    <b>S&#233;lection plage</b>
+    <div class="chips" style="margin-top:8px">
+        <span class="chip muted">1er clic = d&#233;but</span>
+        <span class="chip muted">2e clic = fin</span>
     </div>
 </div>
 
@@ -102,11 +144,15 @@
     [Parameter] public ReservationStatus? SelectedStatus { get; set; }
     [Parameter] public Guid? SelectedOwnerId { get; set; }
     [Parameter] public DateOnly? SelectedDate { get; set; }
+    [Parameter] public DateOnly? RangeStart { get; set; }
+    [Parameter] public DateOnly? RangeEnd { get; set; }
     [Parameter] public OccupationJourDto? Occupation { get; set; }
+    [Parameter] public OccupationRangeDto? RangeOccupation { get; set; }
     [Parameter] public EventCallback<(int year, int month)> OnYearMonthChanged { get; set; }
     [Parameter] public EventCallback<Guid?> OnStudioChanged { get; set; }
     [Parameter] public EventCallback<ReservationStatus?> OnStatusChanged { get; set; }
     [Parameter] public EventCallback<Guid?> OnOwnerChanged { get; set; }
+    [Parameter] public EventCallback OnClearRange { get; set; }
 
     private async Task OnMonthInput(ChangeEventArgs e)
     {
