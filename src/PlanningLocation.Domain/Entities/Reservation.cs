@@ -1,9 +1,11 @@
+using PlanningLocation.Domain.Common;
 using PlanningLocation.Domain.Enums;
+using PlanningLocation.Domain.Events;
 using PlanningLocation.Domain.ValueObjects;
 
 namespace PlanningLocation.Domain.Entities;
 
-public class Reservation
+public class Reservation : IHasDomainEvents
 {
     public Guid Id { get; private set; }
     public Guid StudioId { get; private set; }
@@ -19,6 +21,10 @@ public class Reservation
     public DateTime? ConfirmedAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
+
+    private readonly List<IDomainEvent> _domainEvents = [];
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+    public void ClearDomainEvents() => _domainEvents.Clear();
 
     private Reservation() { }
 
@@ -36,7 +42,7 @@ public class Reservation
         var lines = personLines.ToList();
         ValidatePersonLines(lines, studioCapacity);
 
-        return new Reservation
+        var reservation = new Reservation
         {
             Id = Guid.NewGuid(),
             StudioId = studioId,
@@ -47,6 +53,9 @@ public class Reservation
             Status = ReservationStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
+
+        reservation._domainEvents.Add(new ReservationCreated(reservation.Id, studioId, ownerId));
+        return reservation;
     }
 
     public void Accept(string by)
@@ -58,6 +67,7 @@ public class Reservation
         AcceptedBy = by;
         AcceptedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
+        _domainEvents.Add(new ReservationAccepted(Id, by));
     }
 
     public void Confirm(string by)
@@ -69,6 +79,13 @@ public class Reservation
         ConfirmedBy = by;
         ConfirmedAt = DateTime.UtcNow;
         UpdatedAt = DateTime.UtcNow;
+        _domainEvents.Add(new ReservationConfirmed(Id, by));
+    }
+
+    /// <summary>Records the deletion event. Call before removing the reservation from its repository.</summary>
+    public void MarkDeleted()
+    {
+        _domainEvents.Add(new ReservationDeleted(Id));
     }
 
     public void Update(

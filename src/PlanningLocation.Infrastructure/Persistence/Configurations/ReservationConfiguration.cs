@@ -36,6 +36,7 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         builder.Ignore(r => r.TotalPersonCount);
         builder.Ignore(r => r.TotalAdultCount);
         builder.Ignore(r => r.TotalChildrenUnder3Count);
+        builder.Ignore(r => r.DomainEvents);
 
         builder.HasIndex(r => r.StudioId);
         builder.HasIndex(r => new { r.StudioId, r.Status });

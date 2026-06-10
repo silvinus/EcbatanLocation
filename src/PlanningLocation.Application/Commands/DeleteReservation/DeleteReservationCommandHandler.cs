@@ -11,6 +11,7 @@ public class DeleteReservationCommandHandler(
         var reservation = await reservationRepository.GetByIdAsync(request.ReservationId, cancellationToken)
                           ?? throw new InvalidOperationException($"Reservation '{request.ReservationId}' not found.");
 
+        reservation.MarkDeleted();
         await reservationRepository.DeleteAsync(reservation.Id, cancellationToken);
     }
 }

@@ -15,8 +15,10 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddDbContext<PlanningLocationDbContext>(options =>
-            options.UseSqlite(configuration.GetConnectionString("DefaultConnection")));
+        services.AddScoped<DomainEventDispatchInterceptor>();
+        services.AddDbContext<PlanningLocationDbContext>((serviceProvider, options) =>
+            options.UseSqlite(configuration.GetConnectionString("DefaultConnection"))
+                   .AddInterceptors(serviceProvider.GetRequiredService<DomainEventDispatchInterceptor>()));
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {
