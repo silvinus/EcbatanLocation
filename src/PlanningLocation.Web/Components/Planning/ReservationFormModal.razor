@@ -1,7 +1,8 @@
 @inject IMediator Mediator
 
 <div class="modal-overlay" @onclick="OnCancel">
-    <div class="modal-content modal-wide" @onclick:stopPropagation="true">
+    <div class="modal-content modal-wide" role="dialog" aria-modal="true"
+         aria-label="@(IsEdit ? "Modifier la réservation" : "Nouvelle réservation")" @onclick:stopPropagation="true">
         <div class="modal-hd">
             <h3>@(IsEdit ? "Modifier la réservation" : "Nouvelle réservation")</h3>
             <button class="x" @onclick="OnCancel">Fermer</button>

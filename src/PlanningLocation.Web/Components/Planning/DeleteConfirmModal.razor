@@ -1,7 +1,7 @@
 @inject IMediator Mediator
 
 <div class="modal-overlay" @onclick="OnCancel">
-    <div class="modal-content" style="max-width:440px" @onclick:stopPropagation="true">
+    <div class="modal-content" style="max-width:440px" role="dialog" aria-modal="true" aria-label="Supprimer la réservation" @onclick:stopPropagation="true">
         <div class="modal-hd">
             <h3>Supprimer la réservation</h3>
             <button class="x" @onclick="OnCancel">Fermer</button>

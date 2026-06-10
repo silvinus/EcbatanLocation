@@ -84,6 +84,14 @@ header {
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 
+/* Layout utilities */
+.toolbar { display: flex; gap: 8px; align-items: center; }
+.mt-sm { margin-top: 8px; }
+.mt-md { margin-top: 12px; }
+.center-text { text-align: center; }
+.full-width { width: 100%; justify-content: center; }
+.no-underline { text-decoration: none; }
+
 /* Chips */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
@@ -98,6 +106,9 @@ header {
 /* Legend */
 .legend { display: flex; gap: 8px; flex-wrap: wrap; }
 .dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-pending { background: var(--warn); }
+.dot-accepted { background: var(--brand); }
+.dot-confirmed { background: var(--ok); }
 .legend-item {
     display: flex; align-items: center; gap: 8px; padding: 6px 10px;
     border: 1px solid var(--line); border-radius: 999px; color: var(--muted);
@@ -144,6 +155,9 @@ header {
     cursor: pointer; transition: background .15s;
 }
 .booking:hover { background: var(--hover); }
+.booking:focus-visible, .booking-span:focus-visible, .booking-bar:focus-visible {
+    outline: 2px solid var(--brand); outline-offset: 2px;
+}
 .booking .who { font-weight: 800; font-size: 12px; }
 .booking .owner { font-size: 11px; color: var(--muted); }
 .booking .sub { margin-top: 4px; font-size: 11px; color: var(--muted); display: flex; gap: 8px; }

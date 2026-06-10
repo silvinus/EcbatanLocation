@@ -8,7 +8,7 @@
 
 <div class="admin-layout">
     <div class="admin-tabs">
-        <a href="/" class="chip muted" style="text-decoration:none">&lt; Planning</a>
+        <a href="/" class="chip muted no-underline">&lt; Planning</a>
         <button class="chip @(_activeTab == "pricing" ? "active" : "muted")" @onclick='() => _activeTab = "pricing"'>
             Grille tarifaire
         </button>
@@ -22,10 +22,10 @@
         <div class="card">
             <div class="hd">
                 <h2>Grille tarifaire</h2>
-                <div style="display:flex;gap:8px;align-items:center">
-                    <button class="btn-nav" @onclick="PreviousYear">&lt;</button>
+                <div class="toolbar">
+                    <button class="btn-nav" @onclick="PreviousYear" aria-label="Année précédente">&lt;</button>
                     <span class="pill mono">@_pricingYear</span>
-                    <button class="btn-nav" @onclick="NextYear">&gt;</button>
+                    <button class="btn-nav" @onclick="NextYear" aria-label="Année suivante">&gt;</button>
                 </div>
             </div>
             <div class="bd">
@@ -37,7 +37,7 @@
                 {
                     <div class="hint">
                         Aucune grille tarifaire pour @_pricingYear.
-                        <button class="btn primary" style="margin-top:10px" @onclick="CreateDefaultGrid">
+                        <button class="btn primary mt-sm" @onclick="CreateDefaultGrid">
                             Créer la grille @_pricingYear
                         </button>
                     </div>
@@ -131,7 +131,7 @@
                             }
                         </tbody>
                     </table>
-                    <div class="hint" style="margin-top:12px">
+                    <div class="hint mt-md">
                         Le catalogue de studios est figé dans la configuration initiale. Contactez l'administrateur système pour toute modification.
                     </div>
                 }

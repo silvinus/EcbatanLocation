@@ -1,4 +1,6 @@
-<div class="booking @GetStatusClass()" @onclick="OnClick">
+<div class="booking @GetStatusClass()" @onclick="OnClick"
+     role="button" tabindex="0" @onkeydown="OnKeyDown"
+     aria-label="@($"Réservation {Reservation.TenantName}, {Reservation.OwnerName}, statut {GetStatusLabel()}")">
     <div class="who">@Reservation.TenantName</div>
     <div class="owner">@Reservation.OwnerName</div>
     <div class="sub">
@@ -11,6 +13,12 @@
 @code {
     [Parameter, EditorRequired] public ReservationPlanningDto Reservation { get; set; } = default!;
     [Parameter] public EventCallback OnClick { get; set; }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key is "Enter" or " ")
+            await OnClick.InvokeAsync();
+    }
 
     private string GetStatusClass() => Reservation.Status switch
     {

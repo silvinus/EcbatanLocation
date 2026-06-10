@@ -31,14 +31,13 @@
                                @onchange="e => Input.Password = e.Value?.ToString() ?? string.Empty" />
                         <ValidationMessage For="() => Input.Password" />
                     </div>
-                    <button type="submit" class="btn primary" disabled="@_submitting"
-                            style="width:100%;justify-content:center;margin-top:4px">
+                    <button type="submit" class="btn primary full-width" disabled="@_submitting">
                         @(_submitting ? "Connexion…" : "Se connecter")
                     </button>
                 </div>
             </EditForm>
 
-            <div class="hint" style="margin-top:14px;text-align:center">
+            <div class="hint mt-md center-text">
                 Accès réservé aux propriétaires.
             </div>
         </div>
