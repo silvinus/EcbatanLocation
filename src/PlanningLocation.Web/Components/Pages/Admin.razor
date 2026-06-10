@@ -226,8 +226,8 @@
                 new PlanningLocation.Application.Commands.UpdatePricingGrid.UpdatePricingGridCommand(
                     _pricingYear, lines));
 
-            _pricingSuccess = "Grille tarifaire enregistrée.";
             await LoadPricingGrid();
+            _pricingSuccess = "Grille tarifaire enregistrée.";
         }
         catch (UnauthorizedAccessException)
         {

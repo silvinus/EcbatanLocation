@@ -59,7 +59,10 @@
                         <td colspan="@span.ColSpan"
                             class="day-col bar-cell @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(inRange ? "in-range" : "")"
                             @onclick="() => OnReservationClick(res.Id)">
-                            <div class="booking-span @GetStatusClass(res.Status) @(roundLeft ? "round-left" : "") @(roundRight ? "round-right" : "")">
+                            <div class="booking-span @GetStatusClass(res.Status) @(roundLeft ? "round-left" : "") @(roundRight ? "round-right" : "")"
+                                 role="button" tabindex="0"
+                                 @onkeydown="@(e => OnReservationKeyDown(e, res.Id))"
+                                 aria-label="@($"Réservation {res.TenantName}, {res.OwnerName}")">
                                 <span class="span-name">@res.TenantName</span>
                                 <span class="span-owner">@res.OwnerName</span>
                                 <span class="span-count">@res.PersonLines.Sum(l => l.AdultCount) ad.@(res.PersonLines.Sum(l => l.ChildrenUnder3Count) > 0 ? $" +{res.PersonLines.Sum(l => l.ChildrenUnder3Count)}" : "")</span>
@@ -138,5 +141,11 @@
     private async Task OnReservationClick(Guid id)
     {
         await OnReservationClicked.InvokeAsync(id);
+    }
+
+    private async Task OnReservationKeyDown(KeyboardEventArgs e, Guid id)
+    {
+        if (e.Key is "Enter" or " ")
+            await OnReservationClick(id);
     }
 }
