@@ -26,7 +26,18 @@ En mode connecté, vous avez accès à toutes les fonctionnalités de lecture, p
 - Modifier des réservations existantes
 - Changer le statut des réservations
 - Supprimer des réservations
-- Accéder à la page d'administration
+- Changer votre mot de passe (bouton **Mot de passe** dans l'en-tête)
+
+> La page d'**Administration** (grille tarifaire, catalogue studios) n'est visible que pour les comptes disposant du rôle **Admin**. Les propriétaires sans ce rôle ne voient pas ce bouton.
+
+## Apparence (thème)
+
+Le sélecteur de thème, dans l'en-tête, est disponible pour tous (y compris en mode public) :
+
+- Bouton 🌙 / ☀️ : basculer entre le **mode sombre** et le **mode clair**
+- Menu déroulant : choisir une **couleur de thème** (Océan, etc.)
+
+Le choix est conservé d'une visite à l'autre.
 
 ## Vues du planning
 
@@ -54,16 +65,17 @@ Affiche toutes les réservations du mois sous forme de liste triée par date d'a
 
 1. Cliquer sur **+ Nouvelle réservation**
 2. Remplir le formulaire :
-   - **Studio** : choisir l'hébergement
-   - **Dates** : sélectionner la date d'arrivée et de départ
-   - **Locataire** : nom complet de la personne
-   - **Adultes / Enfants < 3 ans** : nombre de personnes
-   - **Type de client** : propriétaire, invité, connaissance, etc.
-3. Le montant estimé se calcule automatiquement
-4. La disponibilité est vérifiée en temps réel (alerte si chevauchement)
+   - **Studio** : choisir l'hébergement (la capacité, la présence d'une cuisine et le caractère « non louable seul » sont rappelés dans la liste)
+   - **Dates** : sélectionner la date d'arrivée et de départ (le nombre de nuits s'affiche automatiquement)
+   - **Nom du locataire** : nom complet de la personne
+   - **Personnes** : une ou plusieurs **lignes de personnes**. Chaque ligne précise un **type de client** (Propriétaire, Invité avec présence, Connaissance), un nombre d'**adultes** et un nombre d'**enfants < 3 ans**. Utiliser **+ Ajouter un type** pour combiner plusieurs tarifs sur une même réservation, ou la croix pour retirer une ligne.
+3. Le montant estimé se calcule automatiquement en fonction des lignes saisies et de la grille tarifaire
+4. La disponibilité est vérifiée en temps réel (alerte si chevauchement ; l'enregistrement est bloqué)
 5. Cliquer sur **Enregistrer**
 
 La réservation est créée avec le statut **Demande**.
+
+> **Cas particuliers — Mobil-home et emplacements de tente** : pour ces hébergements, le type de client est imposé (respectivement « Mobil-home » et « Tente ») et une seule ligne de personnes est autorisée. L'ajout de types est désactivé.
 
 ### Modifier une réservation
 
@@ -99,26 +111,47 @@ Le workflow de statut est : **Demande → Acceptée → Confirmée**
 
 ### Indicateurs (KPIs)
 
-Cliquer sur un jour dans le planning pour afficher :
+Par défaut, les indicateurs portent sur le jour courant. Cliquer sur un jour dans le planning pour afficher les KPIs de ce jour :
 
 - **Places occupées / total** : nombre de places prises vs capacité totale
 - **Studios occupés** : nombre de studios ayant au moins une réservation (Acceptée ou Confirmée)
 
+### Sélection d'une période
+
+Il est possible d'analyser l'occupation sur une plage de jours :
+
+1. Cliquer sur un premier jour (**1er clic = début**)
+2. Cliquer sur un second jour (**2e clic = fin**)
+
+La barre latérale affiche alors, pour la période sélectionnée :
+
+- **Taux moyen d'occupation** (en %) sur le nombre de jours de la plage
+- **Places moyennes occupées / capacité totale**
+
+Utiliser la croix à côté de la période pour réinitialiser la sélection.
+
 ## Administration
 
-Accessible depuis le bouton **Administration** dans l'en-tête (propriétaires connectés).
+Accessible depuis le bouton **Administration** dans l'en-tête, **réservé aux comptes ayant le rôle Admin** (par défaut : Christophe et le compte technique). Les autres propriétaires ne voient pas ce bouton.
 
 ### Grille tarifaire
 
 - Visualiser et modifier les tarifs par type de client pour chaque année
 - Naviguer entre les années avec les flèches
-- Créer une grille pour une nouvelle année si elle n'existe pas
+- Créer une grille pour une nouvelle année si elle n'existe pas (bouton **Créer la grille**)
 - Les tarifs sont en euros par jour par personne
+- Les enfants de moins de 3 ans d'une « Connaissance » bénéficient automatiquement d'un tarif réduit de 50 % (calculé, pas saisi dans la grille)
 
 ### Studios
 
 - Visualiser le catalogue des studios (capacité, cuisine, louable seul)
 - Le catalogue est figé dans la configuration initiale
+
+## Changer mon mot de passe
+
+Une fois connecté, cliquer sur **Mot de passe** dans l'en-tête. Saisir le mot de passe actuel, puis le nouveau mot de passe (et sa confirmation).
+
+Le mot de passe doit contenir au moins **8 caractères, une majuscule, une minuscule et un chiffre**.
 
 ## Règles métier
 
@@ -143,3 +176,5 @@ Accessible depuis le bouton **Administration** dans l'en-tête (propriétaires c
 ## Comptes propriétaires
 
 Les 4 comptes propriétaires sont : Léa, Sarah, Jean, Christophe. Les identifiants sont fournis par l'administrateur système.
+
+Christophe dispose en plus du rôle **Admin** (accès à la grille tarifaire et au catalogue des studios). Un compte technique dédié possède également ce rôle pour la maintenance.
