@@ -28,7 +28,9 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Test
-        run: dotnet test --no-build --configuration Release --logger "console;verbosity=detailed"
+        env:
+          DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
+        run: dotnet test --no-build --configuration Release --logger "console;verbosity=detailed" --logger GitHubActions
 
   security:
     runs-on: ubuntu-latest

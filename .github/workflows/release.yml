@@ -57,7 +57,9 @@ jobs:
         run: dotnet restore
 
       - name: Run tests
-        run: dotnet test --no-restore --logger "console;verbosity=detailed"
+        env:
+          DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
+        run: dotnet test --no-restore --logger "console;verbosity=detailed" --logger GitHubActions
 
   publish:
     runs-on: ubuntu-latest
