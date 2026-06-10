@@ -424,6 +424,40 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
 
 **Livrable** : Application durcie côté sécurité (rôles admin), intégrité (anti double-réservation), architecture (tarif au Domain, DTOs anglais, domain events, tests Application) et UI (découpage, styles, accessibilité).
 
+### Statut d'avancement (Phase 9 livrée)
+
+| # | Item | Statut |
+|---|------|--------|
+| 1 | Autorisation par rôle Admin | ✅ Fait |
+| 2 | Comptes Christophe (Owner+Admin) + Sylvain (Admin) | ✅ Fait |
+| 3 | Mots de passe par défaut | ⛔ Sans action (à revoir avant prod) |
+| 4 | Contrôle de propriété des réservations | ⛔ Sans action |
+| 5 | Anti double-réservation (transaction + index unique) | ✅ Fait |
+| 6 | Tarif enfants -3 ans hors « Connaissance » | ⛔ Sans action |
+| 7 | Réservation à cheval sur deux années | ⛔ Sans action (faire 2 réservations) |
+| 8 | Tarification déplacée dans le Domain (`PricingGrid.CalculateAmount`) | ✅ Fait |
+| 9 | DTOs renommés en anglais (`MonthlyPlanningDto`, `DailyOccupationDto`, `RangeOccupationDto`) | ✅ Fait |
+| 10 | Domain events (INotification + intercepteur EF) | ✅ Fait |
+| 11 | Tests de la couche Application (26 tests) | ✅ Fait |
+| 12 | Découpage `Home.razor` (code-behind) | ✅ Fait |
+| 13 | Styles inline → classes CSS | ✅ Fait |
+| 14 | Accessibilité (ARIA, clavier, focus, `role=dialog`) | ✅ Fait |
+| 15 | Transitions de statut « retour » | ⛔ Sans action |
+| 16 | Confidentialité publique (H4) | ❓ Non tranché |
+
+**Tests** : 94 tests verts (Domain 44, Application 26, Infrastructure 24). Build sans warning.
+
+**Vérification E2E** : parcours navigateur complet (Claude Preview) de tous les cas d'usage — public, login propriétaire/admin, création/édition/accepter/confirmer/supprimer, overlap, grille tarifaire, responsive mobile.
+
+**Correctifs issus des tests E2E** :
+- Message de succès admin « Grille tarifaire enregistrée » qui ne s'affichait jamais → corrigé.
+- Accessibilité clavier de la vue Mois (`.booking-span`) qui manquait → ajoutée.
+- Page `/Account/AccessDenied` conviviale ajoutée (au lieu d'un écran blanc).
+
+**Commits** : `d27ed9e` (sécurité/intégrité/archi), `7328895` (domain events), `9f8e86b` (UI), `8c18e60` (correctifs E2E).
+
+**Reste ouvert** : item 16 (confidentialité H4) à trancher ; nice-to-have à planifier.
+
 ---
 
 ## Résumé des phases
@@ -438,7 +472,7 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
 | 6 | UI Authentification & Édition | Gestion réservations |
 | 7 | Finalisation & Déploiement | Production |
 | **8** | **Multi-typologies personnes** | **Tarification précise** |
-| **9** | **Durcissement (sécurité, intégrité, archi, UI)** | **Revue de code** |
+| **9** | **Durcissement (sécurité, intégrité, archi, UI)** | **✅ Livrée** |
 
 ## Dépendances NuGet prévues
 
