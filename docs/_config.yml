@@ -1,0 +1,28 @@
+title: Ecbatan Location
+description: Application de gestion de planning de location saisonniere
+url: https://silvinus.github.io
+baseurl: /EcbatanLocation
+remote_theme: just-the-docs/just-the-docs@v0.10.1
+color_scheme: dark
+
+permalink: pretty
+
+aux_links:
+  "GitHub":
+    - https://github.com/silvinus/EcbatanLocation
+
+nav_sort: case_insensitive
+
+search_enabled: true
+search.button: true
+
+back_to_top: true
+back_to_top_text: "Haut de page"
+
+footer_content: "Ecbatan Location &mdash; Projet prive, tous droits reserves."
+
+exclude:
+  - GUIDE_DEPLOIEMENT.md
+  - GUIDE_UTILISATEUR.md
+  - Guide_Utilisateur.pdf
+  - Gemfile.lock
