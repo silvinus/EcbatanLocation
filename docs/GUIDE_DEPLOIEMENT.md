@@ -2,32 +2,47 @@
 
 ## Prérequis
 
-- .NET 10 SDK installé sur la machine de build
+- Compte GitHub avec le repo du projet
 - Serveur VPS Linux (Ubuntu 22.04+ recommandé)
 - Accès SSH au serveur
 
-## 1. Publication de l'application
+## 1. Créer une release
 
-### Build standalone
+Le projet utilise **GitHub Actions** pour builder automatiquement un artifact déployable à chaque tag de version.
 
-```bash
-dotnet publish src/EcbatanLocation.Web -c Release -o ./publish --self-contained -r linux-x64
-```
-
-### Build framework-dependent (nécessite .NET 10 runtime sur le serveur)
+### Créer un tag et déclencher le build
 
 ```bash
-dotnet publish src/EcbatanLocation.Web -c Release -o ./publish
+git tag v1.0.0
+git push origin v1.0.0
 ```
+
+GitHub Actions exécute automatiquement :
+1. Restauration des dépendances
+2. Lancement des tests — si un test échoue, la release est bloquée
+3. Build d'un exécutable **self-contained linux-x64** (single file, pas besoin de .NET sur le serveur)
+4. Publication d'une **GitHub Release** avec l'archive téléchargeable
+
+### Suivre le build
+
+Le pipeline est visible dans l'onglet **Actions** du repo GitHub. La release apparaît dans l'onglet **Releases** une fois le build terminé.
+
+### Convention de versioning
+
+Utiliser le [versioning sémantique](https://semver.org/lang/fr/) :
+- `v1.0.0` → première release stable
+- `v1.1.0` → ajout de fonctionnalités
+- `v1.1.1` → correction de bug
+- `v2.0.0` → changement majeur (breaking changes)
 
 ## 2. Configuration de production
 
-Créer le fichier `appsettings.Production.json` dans le dossier de publication :
+Créer le fichier `appsettings.Production.json` sur le serveur dans `/var/www/ecbatan-location/` :
 
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=/var/lib/EcbatanLocation/planning.db"
+    "DefaultConnection": "Data Source=/var/lib/ecbatan-location/planning.db"
   },
   "Logging": {
     "LogLevel": {
@@ -38,33 +53,23 @@ Créer le fichier `appsettings.Production.json` dans le dossier de publication :
 }
 ```
 
-> **Important** : Ne jamais commiter ce fichier. Modifier les chemins et secrets selon votre environnement.
+> **Important** : Ce fichier contient la configuration spécifique au serveur. Ne jamais le commiter dans le repo.
 
-## 3. Transfert sur le serveur
+## 3. Première installation du serveur
 
-```bash
-rsync -avz ./publish/ user@serveur:/opt/EcbatanLocation/
-```
-
-## 4. Préparation du serveur
-
-### Créer les répertoires
+### Créer les répertoires et l'utilisateur
 
 ```bash
-sudo mkdir -p /opt/EcbatanLocation
-sudo mkdir -p /var/lib/EcbatanLocation
-sudo chown -R www-data:www-data /var/lib/EcbatanLocation
+sudo useradd -r -s /bin/false planning
+sudo mkdir -p /var/www/ecbatan-location
+sudo mkdir -p /var/lib/ecbatan-location
+sudo chown -R planning:planning /var/www/ecbatan-location
+sudo chown -R planning:planning /var/lib/ecbatan-location
 ```
 
-### Rendre l'exécutable fonctionnel (build standalone)
+### Installer le service systemd
 
-```bash
-sudo chmod +x /opt/EcbatanLocation/EcbatanLocation.Web
-```
-
-## 5. Service systemd
-
-Créer le fichier `/etc/systemd/system/EcbatanLocation.service` :
+Créer `/etc/systemd/system/ecbatan-location.service` :
 
 ```ini
 [Unit]
@@ -72,12 +77,12 @@ Description=Ecbatan Location - Application de gestion
 After=network.target
 
 [Service]
-WorkingDirectory=/opt/EcbatanLocation
-ExecStart=/opt/EcbatanLocation/EcbatanLocation.Web
+WorkingDirectory=/var/www/ecbatan-location
+ExecStart=/var/www/ecbatan-location/EcbatanLocation.Web
 Restart=always
 RestartSec=10
-SyslogIdentifier=EcbatanLocation
-User=www-data
+SyslogIdentifier=ecbatan-location
+User=planning
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://localhost:5000
 
@@ -85,24 +90,14 @@ Environment=ASPNETCORE_URLS=http://localhost:5000
 WantedBy=multi-user.target
 ```
 
-### Activer et démarrer le service
-
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable EcbatanLocation
-sudo systemctl start EcbatanLocation
-sudo systemctl status EcbatanLocation
+sudo systemctl enable ecbatan-location
 ```
 
-### Consulter les logs
+### Configurer Nginx (reverse proxy)
 
-```bash
-sudo journalctl -u EcbatanLocation -f
-```
-
-## 6. Reverse proxy Nginx
-
-Installer Nginx et créer `/etc/nginx/sites-available/EcbatanLocation` :
+Installer Nginx et créer `/etc/nginx/sites-available/ecbatan-location` :
 
 ```nginx
 server {
@@ -126,28 +121,78 @@ server {
 > **Note** : Le `Connection "upgrade"` est indispensable pour Blazor Server (SignalR/WebSocket).
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/EcbatanLocation /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/ecbatan-location /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## 7. Certificat HTTPS (Let's Encrypt)
+### Certificat HTTPS (Let's Encrypt)
 
 ```bash
 sudo apt install certbot python3-certbot-nginx
 sudo certbot --nginx -d planning.votredomaine.fr
 ```
 
-Certbot configure automatiquement la redirection HTTP → HTTPS et le renouvellement automatique.
+Certbot configure automatiquement la redirection HTTP → HTTPS et le renouvellement.
 
-## 8. Backup automatique SQLite
+## 4. Déployer une release
 
-Créer le script `/opt/EcbatanLocation/backup.sh` :
+### Option A — Script automatisé (recommandé)
+
+Depuis le PC local, à la racine du projet :
+
+```bash
+# Linux / macOS
+./deployement/deploy.sh <IP_OU_HOST> [USER]
+
+# Windows (PowerShell)
+.\deployement\deploy.ps1 -RemoteHost <IP_OU_HOST> [-User root]
+```
+
+Le script télécharge la dernière release GitHub, la déploie sur le serveur et redémarre l'application.
+
+### Option B — Déploiement manuel
+
+Sur le serveur :
+
+```bash
+# Télécharger la release
+VERSION="1.0.0"
+wget https://github.com/<votre-org>/ecbatan-location/releases/download/v${VERSION}/ecbatan-location-${VERSION}-linux-x64.tar.gz
+
+# Arrêter l'application
+sudo systemctl stop ecbatan-location
+
+# Déployer
+sudo tar -xzf ecbatan-location-${VERSION}-linux-x64.tar.gz -C /var/www/ecbatan-location/
+sudo chown -R planning:planning /var/www/ecbatan-location
+
+# Redémarrer
+sudo systemctl start ecbatan-location
+```
+
+### Vérification post-déploiement
+
+```bash
+# Statut du service
+sudo systemctl status ecbatan-location
+
+# Logs en temps réel
+sudo journalctl -u ecbatan-location -f
+```
+
+1. Accéder à `https://planning.votredomaine.fr` → le planning s'affiche
+2. Se connecter avec un compte propriétaire → mode propriétaire actif
+3. Créer une réservation test → vérifier la persistence (rafraîchir la page)
+
+## 5. Backup automatique SQLite
+
+Créer le script `/var/www/ecbatan-location/backup.sh` :
 
 ```bash
 #!/bin/bash
-BACKUP_DIR="/var/backups/EcbatanLocation"
-DB_PATH="/var/lib/EcbatanLocation/planning.db"
+BACKUP_DIR="/var/backups/ecbatan-location"
+DB_PATH="/var/lib/ecbatan-location/planning.db"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
@@ -158,32 +203,26 @@ ls -t "$BACKUP_DIR"/planning_*.db | tail -n +31 | xargs -r rm
 ```
 
 ```bash
-sudo chmod +x /opt/EcbatanLocation/backup.sh
+sudo chmod +x /var/www/ecbatan-location/backup.sh
 ```
 
 Ajouter au crontab (`sudo crontab -e`) :
 
 ```cron
-0 2 * * * /opt/EcbatanLocation/backup.sh
+0 2 * * * /var/www/ecbatan-location/backup.sh
 ```
 
-## 9. Mise à jour de l'application
+## 6. Rollback
+
+En cas de problème après un déploiement, redéployer la version précédente :
 
 ```bash
-# Sur la machine de build
-dotnet publish src/EcbatanLocation.Web -c Release -o ./publish --self-contained -r linux-x64
-
-# Transfert
-rsync -avz ./publish/ user@serveur:/opt/EcbatanLocation/
-
-# Sur le serveur
-sudo systemctl restart EcbatanLocation
+VERSION="1.0.0"  # version stable précédente
+sudo systemctl stop ecbatan-location
+wget https://github.com/<votre-org>/ecbatan-location/releases/download/v${VERSION}/ecbatan-location-${VERSION}-linux-x64.tar.gz
+sudo tar -xzf ecbatan-location-${VERSION}-linux-x64.tar.gz -C /var/www/ecbatan-location/
+sudo chown -R planning:planning /var/www/ecbatan-location
+sudo systemctl start ecbatan-location
 ```
 
-## 10. Vérifications post-déploiement
-
-1. Accéder à `https://planning.votredomaine.fr` → le planning s'affiche
-2. Se connecter avec un compte propriétaire → mode propriétaire actif
-3. Créer une réservation test → vérifier la persistence (rafraîchir la page)
-4. Vérifier les headers de sécurité : `curl -I https://planning.votredomaine.fr`
-5. Vérifier les logs : `sudo journalctl -u EcbatanLocation --since "5 minutes ago"`
+Toutes les releases sont conservées sur GitHub et téléchargeables à tout moment.

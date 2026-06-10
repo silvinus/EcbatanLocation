@@ -2,50 +2,57 @@
 set -euo pipefail
 
 # ============================================================
-# Script de déploiement (à exécuter depuis le PC local)
-# Usage : ./deployement/deploy.sh <IP_OU_HOST> [USER]
+# Script de déploiement depuis une GitHub Release
+# Usage : ./deployement/deploy.sh <IP_OU_HOST> [USER] [VERSION]
+#
+# Sans VERSION : déploie la dernière release
+# Avec VERSION : déploie la version spécifiée (ex: 1.2.0)
 # ============================================================
 
 if [ $# -lt 1 ]; then
-    echo "Usage : $0 <IP_OU_HOST> [USER]"
+    echo "Usage : $0 <IP_OU_HOST> [USER] [VERSION]"
     echo "Exemple : $0 203.0.113.42"
-    echo "Exemple : $0 planning.exemple.fr deploy"
+    echo "Exemple : $0 planning.exemple.fr deploy 1.2.0"
     exit 1
 fi
 
 HOST="$1"
 USER="${2:-root}"
 APP_DIR="/var/www/ecbatan-location"
-PUBLISH_DIR="./publish"
-PROJECT="src/EcbatanLocation.Web/EcbatanLocation.Web.csproj"
+REPO="<votre-org>/ecbatan-location"
 
-echo "==> Compilation en Release..."
-dotnet publish "$PROJECT" \
-    -c Release \
-    -o "$PUBLISH_DIR" \
-    --self-contained false \
-    -r linux-x64
+if [ $# -ge 3 ]; then
+    VERSION="$3"
+    echo "==> Version demandée : v${VERSION}"
+else
+    echo "==> Récupération de la dernière version..."
+    VERSION=$(gh release view --repo "$REPO" --json tagName -q '.tagName' | sed 's/^v//')
+    echo "    Dernière version : v${VERSION}"
+fi
 
-echo "==> Copie de la config de production..."
-cp deployement/appsettings.Production.json "$PUBLISH_DIR/"
+ARCHIVE="ecbatan-location-${VERSION}-linux-x64.tar.gz"
+DOWNLOAD_URL="https://github.com/${REPO}/releases/download/v${VERSION}/${ARCHIVE}"
 
-echo "==> Envoi des fichiers sur le serveur..."
-rsync -avz --delete \
-    --exclude 'data/' \
-    --exclude 'logs/' \
-    "$PUBLISH_DIR/" "${USER}@${HOST}:${APP_DIR}/"
+echo "==> Téléchargement de ${ARCHIVE}..."
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+wget -q --show-progress -O "${TMPDIR}/${ARCHIVE}" "$DOWNLOAD_URL"
 
-echo "==> Correction des permissions..."
-ssh "${USER}@${HOST}" "chown -R planning:planning ${APP_DIR}"
+echo "==> Envoi sur le serveur..."
+scp "${TMPDIR}/${ARCHIVE}" "${USER}@${HOST}:/tmp/${ARCHIVE}"
 
-echo "==> Redémarrage de l'application..."
-ssh "${USER}@${HOST}" "systemctl restart ecbatan-location"
+echo "==> Déploiement sur le serveur..."
+ssh "${USER}@${HOST}" bash -s <<REMOTE
+set -euo pipefail
+sudo systemctl stop ecbatan-location
+sudo tar -xzf /tmp/${ARCHIVE} -C ${APP_DIR}/
+sudo chown -R planning:planning ${APP_DIR}
+sudo systemctl start ecbatan-location
+rm /tmp/${ARCHIVE}
+REMOTE
 
 echo "==> Vérification du statut..."
 ssh "${USER}@${HOST}" "sleep 2 && systemctl is-active ecbatan-location"
 
 echo ""
-echo "==> Déploiement terminé avec succès !"
-
-# Nettoyage local
-rm -rf "$PUBLISH_DIR"
+echo "==> Déploiement v${VERSION} terminé avec succès !"

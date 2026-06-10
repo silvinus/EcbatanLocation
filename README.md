@@ -114,34 +114,40 @@ dotnet test
 
 L'application se déploie sur un VPS Linux (Ubuntu 24.04 LTS) avec Nginx en reverse proxy et un certificat SSL Let's Encrypt.
 
-### Première installation
+### Créer une release
+
+Le projet utilise **GitHub Actions** : chaque tag `v*` déclenche un build automatique qui produit un exécutable self-contained linux-x64 publié en tant que **GitHub Release**.
 
 ```bash
-# Copier les scripts sur le serveur
-scp -r deployement/ root@VOTRE_IP:/tmp/deployement/
-
-# Sur le serveur : installation initiale
-ssh root@VOTRE_IP
-chmod +x /tmp/deployement/*.sh
-/tmp/deployement/01-setup-server.sh
-
-# Configurer le domaine dans les fichiers Nginx puis installer
-/tmp/deployement/02-install-nginx.sh
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-### Déploiements suivants
+Le pipeline lance les tests, build l'application et publie l'archive sur GitHub Releases avec des release notes auto-générées.
+
+### Déployer une release
 
 Depuis le PC local, à la racine du projet :
 
 ```bash
-# Linux / macOS
-./deployement/deploy.sh VOTRE_IP
+# Dernière release
+./deployement/deploy.sh VOTRE_IP                    # Linux / macOS
+.\deployement\deploy.ps1 -RemoteHost VOTRE_IP       # Windows
 
-# Windows (PowerShell)
-.\deployement\deploy.ps1 VOTRE_IP
+# Version spécifique
+./deployement/deploy.sh VOTRE_IP root 1.2.0          # Linux / macOS
+.\deployement\deploy.ps1 -RemoteHost VOTRE_IP -Version 1.2.0  # Windows
 ```
 
-Le script compile l'application, la publie et la déploie sur le serveur.
+Le script télécharge la release depuis GitHub, la déploie sur le serveur et redémarre l'application.
+
+### Rollback
+
+Redéployer une version antérieure — toutes les releases sont conservées sur GitHub :
+
+```bash
+./deployement/deploy.sh VOTRE_IP root 1.0.0
+```
 
 ### Vérification
 
@@ -153,6 +159,8 @@ journalctl -u ecbatan-location -f
 ### Sauvegarde
 
 Un cron sauvegarde la base SQLite chaque jour à 2h dans `/var/backups/ecbatan-location/` avec une rétention de 30 jours.
+
+Voir [docs/GUIDE_DEPLOIEMENT.md](docs/GUIDE_DEPLOIEMENT.md) pour le guide complet (installation serveur, Nginx, HTTPS, backups).
 
 ## Licence
 
