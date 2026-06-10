@@ -57,7 +57,7 @@ jobs:
         run: dotnet restore
 
       - name: Run tests
-        run: dotnet test --no-restore --verbosity normal
+        run: dotnet test --no-restore --logger "console;verbosity=detailed"
 
   publish:
     runs-on: ubuntu-latest

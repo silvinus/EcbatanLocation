@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using EcbatanLocation.Infrastructure.Persistence;
 
 namespace EcbatanLocation.Application.Tests;
@@ -25,6 +26,11 @@ public class IntegrationTestFixture : IAsyncLifetime
             .WithWebHostBuilder(builder =>
             {
                 builder.UseEnvironment("Testing");
+                builder.ConfigureLogging(logging =>
+                {
+                    logging.ClearProviders();
+                    logging.SetMinimumLevel(LogLevel.Warning);
+                });
                 builder.ConfigureServices(services =>
                 {
                     var dbDescriptors = services

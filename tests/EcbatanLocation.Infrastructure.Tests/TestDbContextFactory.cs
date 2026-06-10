@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using EcbatanLocation.Infrastructure.Persistence;
 
 namespace EcbatanLocation.Infrastructure.Tests;
@@ -18,6 +19,7 @@ public sealed class TestDbContextFactory : IDisposable
     {
         var options = new DbContextOptionsBuilder<EcbatanLocationDbContext>()
             .UseSqlite(_connection)
+            .LogTo(_ => { }, LogLevel.Warning)
             .Options;
 
         var context = new EcbatanLocationDbContext(options);
