@@ -1,4 +1,4 @@
-using MediatR;
+using PlanningLocation.Application.Messaging;
 using Microsoft.Extensions.Logging;
 using PlanningLocation.Domain.Events;
 

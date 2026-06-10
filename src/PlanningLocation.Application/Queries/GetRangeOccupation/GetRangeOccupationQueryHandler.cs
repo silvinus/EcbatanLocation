@@ -1,4 +1,4 @@
-using MediatR;
+using PlanningLocation.Application.Messaging;
 using PlanningLocation.Application.DTOs;
 using PlanningLocation.Domain.Enums;
 using PlanningLocation.Domain.Repositories;

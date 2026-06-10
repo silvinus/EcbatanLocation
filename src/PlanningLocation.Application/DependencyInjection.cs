@@ -1,7 +1,7 @@
 using FluentValidation;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using PlanningLocation.Application.Behaviors;
+using PlanningLocation.Application.Messaging;
 using PlanningLocation.Domain.Services;
 
 namespace PlanningLocation.Application;
@@ -12,7 +12,7 @@ public static class DependencyInjection
     {
         var assembly = typeof(DependencyInjection).Assembly;
 
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
+        services.AddMediator(assembly);
         services.AddValidatorsFromAssembly(assembly);
         services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
         services.AddScoped<ReservationDomainService>();

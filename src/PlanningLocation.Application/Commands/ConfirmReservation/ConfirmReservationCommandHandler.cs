@@ -1,4 +1,4 @@
-using MediatR;
+using PlanningLocation.Application.Messaging;
 using PlanningLocation.Domain.Repositories;
 
 namespace PlanningLocation.Application.Commands.ConfirmReservation;

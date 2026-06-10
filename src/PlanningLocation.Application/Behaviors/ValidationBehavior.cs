@@ -1,5 +1,5 @@
 using FluentValidation;
-using MediatR;
+using PlanningLocation.Application.Messaging;
 
 namespace PlanningLocation.Application.Behaviors;
 

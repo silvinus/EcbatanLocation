@@ -1,4 +1,4 @@
-using MediatR;
+using PlanningLocation.Application.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using PlanningLocation.Application.Events;
@@ -7,7 +7,7 @@ using PlanningLocation.Domain.Common;
 namespace PlanningLocation.Infrastructure.Persistence;
 
 /// <summary>
-/// Collects domain events from tracked aggregates and publishes them through MediatR
+/// Collects domain events from tracked aggregates and publishes them through the mediator
 /// just before changes are saved, then clears them so they fire exactly once.
 /// </summary>
 public sealed class DomainEventDispatchInterceptor(IMediator mediator) : SaveChangesInterceptor

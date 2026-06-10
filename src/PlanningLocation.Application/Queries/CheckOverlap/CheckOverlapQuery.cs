@@ -1,4 +1,4 @@
-using MediatR;
+using PlanningLocation.Application.Messaging;
 
 namespace PlanningLocation.Application.Queries.CheckOverlap;
 

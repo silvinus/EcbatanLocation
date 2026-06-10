@@ -1,4 +1,4 @@
-using MediatR;
+using PlanningLocation.Application.Messaging;
 using PlanningLocation.Domain.Repositories;
 using PlanningLocation.Domain.Services;
 using PlanningLocation.Domain.ValueObjects;

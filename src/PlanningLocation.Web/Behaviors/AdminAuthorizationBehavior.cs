@@ -1,4 +1,4 @@
-using MediatR;
+using PlanningLocation.Application.Messaging;
 using Microsoft.AspNetCore.Components.Authorization;
 using PlanningLocation.Application.Behaviors;
 

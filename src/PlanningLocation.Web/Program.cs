@@ -1,5 +1,5 @@
 using System.Threading.RateLimiting;
-using MediatR;
+using PlanningLocation.Application.Messaging;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
