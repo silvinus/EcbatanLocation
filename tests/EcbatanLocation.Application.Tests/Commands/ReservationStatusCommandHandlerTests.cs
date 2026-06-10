@@ -1,87 +1,88 @@
 using EcbatanLocation.Application.Commands.AcceptReservation;
 using EcbatanLocation.Application.Commands.ConfirmReservation;
+using EcbatanLocation.Application.Commands.CreateReservation;
 using EcbatanLocation.Application.Commands.DeleteReservation;
-using EcbatanLocation.Application.Tests.Fakes;
-using EcbatanLocation.Domain.Entities;
+using EcbatanLocation.Application.DTOs;
 using EcbatanLocation.Domain.Enums;
-using EcbatanLocation.Domain.ValueObjects;
+using EcbatanLocation.Domain.Repositories;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EcbatanLocation.Application.Tests.Commands;
 
-public class ReservationStatusCommandHandlerTests
+public class ReservationStatusCommandHandlerTests(IntegrationTestFixture fixture)
+    : IntegrationTestBase(fixture)
 {
-    private readonly FakeReservationRepository _reservations = new();
-    private static readonly Studio Villa = Studio.Create("Villa", 6, true, true, 1);
-
-    private Reservation Seed()
+    private async Task<Guid> SeedReservationAsync()
     {
-        var r = Reservation.Create(Villa.Id, Guid.NewGuid(),
-            new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8)),
-            "Dupont", [new PersonLine(ClientType.Owner, 2, 0)], Villa.Capacity);
-        _reservations.Items.Add(r);
-        return r;
+        var villa = await GetStudioAsync("Villa");
+        var owner = await GetOwnerAsync("Léa");
+        return await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id,
+            new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8),
+            "Dupont", [new PersonLineDto(ClientType.Owner, 2, 0)]));
     }
 
     [Fact]
     public async Task Accept_PendingReservation_MovesToAccepted()
     {
-        var r = Seed();
-        var handler = new AcceptReservationCommandHandler(_reservations);
+        var id = await SeedReservationAsync();
 
-        await handler.Handle(new AcceptReservationCommand(r.Id, "Léa"), default);
+        await Mediator.Send(new AcceptReservationCommand(id, "Léa"));
 
-        Assert.Equal(ReservationStatus.Accepted, r.Status);
-        Assert.Equal("Léa", r.AcceptedBy);
-        Assert.NotNull(r.AcceptedAt);
+        var repo = Services.GetRequiredService<IReservationRepository>();
+        var reservation = await repo.GetByIdAsync(id);
+        Assert.NotNull(reservation);
+        Assert.Equal(ReservationStatus.Accepted, reservation.Status);
+        Assert.Equal("Léa", reservation.AcceptedBy);
+        Assert.NotNull(reservation.AcceptedAt);
     }
 
     [Fact]
     public async Task Accept_NotFound_Throws()
     {
-        var handler = new AcceptReservationCommandHandler(_reservations);
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => handler.Handle(new AcceptReservationCommand(Guid.NewGuid(), "Léa"), default));
+            () => Mediator.Send(new AcceptReservationCommand(Guid.NewGuid(), "Léa")));
     }
 
     [Fact]
     public async Task Confirm_AcceptedReservation_MovesToConfirmed()
     {
-        var r = Seed();
-        r.Accept("Léa");
-        var handler = new ConfirmReservationCommandHandler(_reservations);
+        var id = await SeedReservationAsync();
+        await Mediator.Send(new AcceptReservationCommand(id, "Léa"));
 
-        await handler.Handle(new ConfirmReservationCommand(r.Id, "Jean"), default);
+        await Mediator.Send(new ConfirmReservationCommand(id, "Jean"));
 
-        Assert.Equal(ReservationStatus.Confirmed, r.Status);
-        Assert.Equal("Jean", r.ConfirmedBy);
+        var repo = Services.GetRequiredService<IReservationRepository>();
+        var reservation = await repo.GetByIdAsync(id);
+        Assert.NotNull(reservation);
+        Assert.Equal(ReservationStatus.Confirmed, reservation.Status);
+        Assert.Equal("Jean", reservation.ConfirmedBy);
     }
 
     [Fact]
     public async Task Confirm_PendingReservation_Throws()
     {
-        var r = Seed();
-        var handler = new ConfirmReservationCommandHandler(_reservations);
+        var id = await SeedReservationAsync();
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => handler.Handle(new ConfirmReservationCommand(r.Id, "Jean"), default));
+            () => Mediator.Send(new ConfirmReservationCommand(id, "Jean")));
     }
 
     [Fact]
     public async Task Delete_RemovesReservation()
     {
-        var r = Seed();
-        var handler = new DeleteReservationCommandHandler(_reservations);
+        var id = await SeedReservationAsync();
 
-        await handler.Handle(new DeleteReservationCommand(r.Id), default);
+        await Mediator.Send(new DeleteReservationCommand(id));
 
-        Assert.Empty(_reservations.Items);
+        var repo = Services.GetRequiredService<IReservationRepository>();
+        var reservation = await repo.GetByIdAsync(id);
+        Assert.Null(reservation);
     }
 
     [Fact]
     public async Task Delete_NotFound_Throws()
     {
-        var handler = new DeleteReservationCommandHandler(_reservations);
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => handler.Handle(new DeleteReservationCommand(Guid.NewGuid()), default));
+            () => Mediator.Send(new DeleteReservationCommand(Guid.NewGuid())));
     }
 }

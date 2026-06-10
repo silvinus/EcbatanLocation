@@ -19,4 +19,8 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="EcbatanLocation.Application.Tests" />
+  </ItemGroup>
+
 </Project>
