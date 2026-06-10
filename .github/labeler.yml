@@ -1,0 +1,23 @@
+domain:
+  - changed-files:
+      - any-glob-to-any-file: 'src/EcbatanLocation.Domain/**'
+
+application:
+  - changed-files:
+      - any-glob-to-any-file: 'src/EcbatanLocation.Application/**'
+
+infrastructure:
+  - changed-files:
+      - any-glob-to-any-file: 'src/EcbatanLocation.Infrastructure/**'
+
+web:
+  - changed-files:
+      - any-glob-to-any-file: 'src/EcbatanLocation.Web/**'
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file: 'tests/**'
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file: '.github/**'
