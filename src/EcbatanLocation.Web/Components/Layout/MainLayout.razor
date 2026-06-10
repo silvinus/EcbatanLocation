@@ -1,0 +1,43 @@
+@inherits LayoutComponentBase
+
+<div class="wrap">
+    <header>
+        <div class="title">
+            <h1>🏠 Ecbatan Location</h1>
+            <AuthorizeView>
+                <Authorized>
+                    <p>Mode propriétaire — @context.User.Identity?.Name</p>
+                </Authorized>
+                <NotAuthorized>
+                    <p>Vue mensuelle - lecture publique</p>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+        <div class="top-actions">
+            <ThemeSwitcher />
+            <AuthorizeView>
+                <Authorized>
+                    <AuthorizeView Roles="Admin" Context="adminContext">
+                        <a href="/admin" class="btn">Administration</a>
+                    </AuthorizeView>
+                    <a href="/change-password" class="btn">Mot de passe</a>
+                    <span class="pill pill-auth">Connecté</span>
+                    <a href="/api/auth/logout" class="btn">Déconnexion</a>
+                </Authorized>
+                <NotAuthorized>
+                    <span class="pill">Mode : <b>Public (lecture seule)</b></span>
+                    <a href="/login" class="btn primary">Se connecter</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </header>
+
+    @Body
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">&#x1F5D9;</span>
+</div>
+

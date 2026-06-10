@@ -17,12 +17,12 @@ echo "==> Installation de Certbot..."
 apt install -y certbot python3-certbot-nginx
 
 echo "==> Copie de la configuration Nginx..."
-cp /tmp/deployement/nginx/planning-location.conf /etc/nginx/sites-available/planning-location
-ln -sf /etc/nginx/sites-available/planning-location /etc/nginx/sites-enabled/
+cp /tmp/deployement/nginx/ecbatan-location.conf /etc/nginx/sites-available/ecbatan-location
+ln -sf /etc/nginx/sites-available/ecbatan-location /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 
 # Remplacer le domaine dans la config
-sed -i "s/planning\.exemple\.fr/$DOMAIN/g" /etc/nginx/sites-available/planning-location
+sed -i "s/planning\.exemple\.fr/$DOMAIN/g" /etc/nginx/sites-available/ecbatan-location
 
 echo "==> Test de la configuration Nginx..."
 nginx -t

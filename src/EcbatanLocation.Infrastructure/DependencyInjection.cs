@@ -1,0 +1,42 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using EcbatanLocation.Domain.Repositories;
+using EcbatanLocation.Infrastructure.Identity;
+using EcbatanLocation.Infrastructure.Persistence;
+using EcbatanLocation.Infrastructure.Repositories;
+
+namespace EcbatanLocation.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructure(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddScoped<DomainEventDispatchInterceptor>();
+        services.AddDbContext<EcbatanLocationDbContext>((serviceProvider, options) =>
+            options.UseSqlite(configuration.GetConnectionString("DefaultConnection"))
+                   .AddInterceptors(serviceProvider.GetRequiredService<DomainEventDispatchInterceptor>()));
+
+        services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+            {
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequiredLength = 8;
+                options.Password.RequireNonAlphanumeric = false;
+                options.User.RequireUniqueEmail = true;
+            })
+            .AddEntityFrameworkStores<EcbatanLocationDbContext>()
+            .AddDefaultTokenProviders();
+
+        services.AddScoped<IStudioRepository, StudioRepository>();
+        services.AddScoped<IReservationRepository, ReservationRepository>();
+        services.AddScoped<IOwnerRepository, OwnerRepository>();
+        services.AddScoped<IPricingGridRepository, PricingGridRepository>();
+
+        return services;
+    }
+}

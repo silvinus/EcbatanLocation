@@ -1,4 +1,4 @@
-# Déploiement Planning Location
+# Déploiement Ecbatan Location
 
 ## Prérequis
 
@@ -27,7 +27,7 @@ chmod +x /tmp/deployement/*.sh
 ### 2. Configurer le domaine
 
 Éditer les fichiers avant de lancer l'installation :
-- `nginx/planning-location.conf` : remplacer `planning.exemple.fr` par votre domaine
+- `nginx/ecbatan-location.conf` : remplacer `planning.exemple.fr` par votre domaine
 - `02-install-nginx.sh` : remplacer le domaine et l'email pour Let's Encrypt
 
 ### 3. Installer Nginx + SSL
@@ -47,8 +47,8 @@ chmod +x /tmp/deployement/*.sh
 
 ```bash
 # Sur le serveur
-systemctl status planning-location
-journalctl -u planning-location -f
+systemctl status ecbatan-location
+journalctl -u ecbatan-location -f
 ```
 
 ## Déploiements suivants
@@ -61,5 +61,5 @@ Depuis le PC local, relancer simplement :
 
 ## Backup
 
-Un cron sauvegarde la base SQLite chaque jour à 2h dans `/var/backups/planning-location/`.
+Un cron sauvegarde la base SQLite chaque jour à 2h dans `/var/backups/ecbatan-location/`.
 Rétention : 30 jours.

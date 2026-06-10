@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EcbatanLocation.Application/EcbatanLocation.Application.csproj" />
+    <Project Path="src/EcbatanLocation.Domain/EcbatanLocation.Domain.csproj" />
+    <Project Path="src/EcbatanLocation.Infrastructure/EcbatanLocation.Infrastructure.csproj" />
+    <Project Path="src/EcbatanLocation.Web/EcbatanLocation.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EcbatanLocation.Application.Tests/EcbatanLocation.Application.Tests.csproj" />
+    <Project Path="tests/EcbatanLocation.Domain.Tests/EcbatanLocation.Domain.Tests.csproj" />
+    <Project Path="tests/EcbatanLocation.Infrastructure.Tests/EcbatanLocation.Infrastructure.Tests.csproj" />
+  </Folder>
+</Solution>

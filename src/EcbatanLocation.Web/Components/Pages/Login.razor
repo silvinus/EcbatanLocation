@@ -1,0 +1,104 @@
+@page "/login"
+@using Microsoft.AspNetCore.Identity
+@using EcbatanLocation.Infrastructure.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Connexion - Ecbatan Location</PageTitle>
+
+<div class="login-wrap">
+    <div class="card login-card">
+        <div class="hd"><h2>Connexion</h2></div>
+        <div class="bd">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert-error">@_errorMessage</div>
+            }
+
+            <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                <DataAnnotationsValidator />
+
+                <div class="grid">
+                    <div class="field">
+                        <label for="email">Email</label>
+                        <InputText id="email" @bind-Value="Input.Email" placeholder="votre@email.fr" />
+                        <ValidationMessage For="() => Input.Email" />
+                    </div>
+                    <div class="field">
+                        <label for="password">Mot de passe</label>
+                        <input id="password" type="password" name="Input.Password"
+                               value="@Input.Password"
+                               @onchange="e => Input.Password = e.Value?.ToString() ?? string.Empty" />
+                        <ValidationMessage For="() => Input.Password" />
+                    </div>
+                    <button type="submit" class="btn primary full-width" disabled="@_submitting">
+                        @(_submitting ? "Connexion…" : "Se connecter")
+                    </button>
+                </div>
+            </EditForm>
+
+            <div class="hint mt-md center-text">
+                Accès réservé aux propriétaires.
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private LoginModel Input { get; set; } = default!;
+
+    private string? _errorMessage;
+    private bool _submitting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+        if (HttpContext.User.Identity?.IsAuthenticated == true)
+        {
+            NavigationManager.NavigateTo("/", forceLoad: true);
+        }
+    }
+
+    private async Task LoginUser()
+    {
+        _errorMessage = null;
+        _submitting = true;
+
+        try
+        {
+            var result = await SignInManager.PasswordSignInAsync(
+                Input.Email, Input.Password, isPersistent: true, lockoutOnFailure: false);
+
+            if (result.Succeeded)
+            {
+                NavigationManager.NavigateTo("/", forceLoad: true);
+            }
+            else if (result.IsLockedOut)
+            {
+                _errorMessage = "Compte verrouillé. Réessayez plus tard.";
+            }
+            else
+            {
+                _errorMessage = "Email ou mot de passe incorrect.";
+            }
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "L'email est requis.")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Format d'email invalide.")]
+        public string Email { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Le mot de passe est requis.")]
+        public string Password { get; set; } = "";
+    }
+}

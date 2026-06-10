@@ -1,8 +1,8 @@
-# Guide utilisateur - Planning Location
+# Guide utilisateur - Ecbatan Location
 
 ## Présentation
 
-Planning Location est une application web de gestion de planning pour une maison de vacances partagée entre 4 copropriétaires. Elle permet de visualiser les réservations, de gérer les disponibilités et de suivre les statuts de chaque réservation.
+Ecbatan Location est une application web de gestion de planning pour une maison de vacances partagée entre 4 copropriétaires. Elle permet de visualiser les réservations, de gérer les disponibilités et de suivre les statuts de chaque réservation.
 
 ## Accès à l'application
 

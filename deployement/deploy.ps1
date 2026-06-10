@@ -11,9 +11,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$AppDir = "/var/www/planning-location"
+$AppDir = "/var/www/ecbatan-location"
 $PublishDir = ".\publish"
-$Project = "src\PlanningLocation.Web\PlanningLocation.Web.csproj"
+$Project = "src\EcbatanLocation.Web\EcbatanLocation.Web.csproj"
 
 Write-Host "==> Compilation en Release..." -ForegroundColor Cyan
 dotnet publish $Project `
@@ -32,10 +32,10 @@ Write-Host "==> Correction des permissions..." -ForegroundColor Cyan
 ssh "${User}@${RemoteHost}" "chown -R planning:planning ${AppDir}"
 
 Write-Host "==> Redémarrage de l'application..." -ForegroundColor Cyan
-ssh "${User}@${RemoteHost}" "systemctl restart planning-location"
+ssh "${User}@${RemoteHost}" "systemctl restart ecbatan-location"
 
 Write-Host "==> Vérification du statut..." -ForegroundColor Cyan
-ssh "${User}@${RemoteHost}" "sleep 2 && systemctl is-active planning-location"
+ssh "${User}@${RemoteHost}" "sleep 2 && systemctl is-active ecbatan-location"
 
 Write-Host ""
 Write-Host "==> Déploiement terminé avec succès !" -ForegroundColor Green

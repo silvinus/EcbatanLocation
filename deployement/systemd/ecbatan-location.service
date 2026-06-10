@@ -1,0 +1,27 @@
+[Unit]
+Description=Ecbatan Location - Blazor Server App
+After=network.target
+
+[Service]
+Type=notify
+User=planning
+Group=planning
+WorkingDirectory=/var/www/ecbatan-location
+ExecStart=/usr/bin/dotnet /var/www/ecbatan-location/EcbatanLocation.Web.dll
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=ecbatan-location
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5000
+Environment=DOTNET_PRINT_TELEMETRY_MESSAGE=false
+
+# Sécurité systemd
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/ecbatan-location/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

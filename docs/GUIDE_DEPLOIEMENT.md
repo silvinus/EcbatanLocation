@@ -1,4 +1,4 @@
-# Guide de déploiement - Planning Location
+# Guide de déploiement - Ecbatan Location
 
 ## Prérequis
 
@@ -11,13 +11,13 @@
 ### Build standalone
 
 ```bash
-dotnet publish src/PlanningLocation.Web -c Release -o ./publish --self-contained -r linux-x64
+dotnet publish src/EcbatanLocation.Web -c Release -o ./publish --self-contained -r linux-x64
 ```
 
 ### Build framework-dependent (nécessite .NET 10 runtime sur le serveur)
 
 ```bash
-dotnet publish src/PlanningLocation.Web -c Release -o ./publish
+dotnet publish src/EcbatanLocation.Web -c Release -o ./publish
 ```
 
 ## 2. Configuration de production
@@ -27,7 +27,7 @@ Créer le fichier `appsettings.Production.json` dans le dossier de publication :
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Data Source=/var/lib/planninglocation/planning.db"
+    "DefaultConnection": "Data Source=/var/lib/EcbatanLocation/planning.db"
   },
   "Logging": {
     "LogLevel": {
@@ -43,7 +43,7 @@ Créer le fichier `appsettings.Production.json` dans le dossier de publication :
 ## 3. Transfert sur le serveur
 
 ```bash
-rsync -avz ./publish/ user@serveur:/opt/planninglocation/
+rsync -avz ./publish/ user@serveur:/opt/EcbatanLocation/
 ```
 
 ## 4. Préparation du serveur
@@ -51,32 +51,32 @@ rsync -avz ./publish/ user@serveur:/opt/planninglocation/
 ### Créer les répertoires
 
 ```bash
-sudo mkdir -p /opt/planninglocation
-sudo mkdir -p /var/lib/planninglocation
-sudo chown -R www-data:www-data /var/lib/planninglocation
+sudo mkdir -p /opt/EcbatanLocation
+sudo mkdir -p /var/lib/EcbatanLocation
+sudo chown -R www-data:www-data /var/lib/EcbatanLocation
 ```
 
 ### Rendre l'exécutable fonctionnel (build standalone)
 
 ```bash
-sudo chmod +x /opt/planninglocation/PlanningLocation.Web
+sudo chmod +x /opt/EcbatanLocation/EcbatanLocation.Web
 ```
 
 ## 5. Service systemd
 
-Créer le fichier `/etc/systemd/system/planninglocation.service` :
+Créer le fichier `/etc/systemd/system/EcbatanLocation.service` :
 
 ```ini
 [Unit]
-Description=Planning Location - Application de gestion
+Description=Ecbatan Location - Application de gestion
 After=network.target
 
 [Service]
-WorkingDirectory=/opt/planninglocation
-ExecStart=/opt/planninglocation/PlanningLocation.Web
+WorkingDirectory=/opt/EcbatanLocation
+ExecStart=/opt/EcbatanLocation/EcbatanLocation.Web
 Restart=always
 RestartSec=10
-SyslogIdentifier=planninglocation
+SyslogIdentifier=EcbatanLocation
 User=www-data
 Environment=ASPNETCORE_ENVIRONMENT=Production
 Environment=ASPNETCORE_URLS=http://localhost:5000
@@ -89,20 +89,20 @@ WantedBy=multi-user.target
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable planninglocation
-sudo systemctl start planninglocation
-sudo systemctl status planninglocation
+sudo systemctl enable EcbatanLocation
+sudo systemctl start EcbatanLocation
+sudo systemctl status EcbatanLocation
 ```
 
 ### Consulter les logs
 
 ```bash
-sudo journalctl -u planninglocation -f
+sudo journalctl -u EcbatanLocation -f
 ```
 
 ## 6. Reverse proxy Nginx
 
-Installer Nginx et créer `/etc/nginx/sites-available/planninglocation` :
+Installer Nginx et créer `/etc/nginx/sites-available/EcbatanLocation` :
 
 ```nginx
 server {
@@ -126,7 +126,7 @@ server {
 > **Note** : Le `Connection "upgrade"` est indispensable pour Blazor Server (SignalR/WebSocket).
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/planninglocation /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/EcbatanLocation /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -142,12 +142,12 @@ Certbot configure automatiquement la redirection HTTP → HTTPS et le renouvelle
 
 ## 8. Backup automatique SQLite
 
-Créer le script `/opt/planninglocation/backup.sh` :
+Créer le script `/opt/EcbatanLocation/backup.sh` :
 
 ```bash
 #!/bin/bash
-BACKUP_DIR="/var/backups/planninglocation"
-DB_PATH="/var/lib/planninglocation/planning.db"
+BACKUP_DIR="/var/backups/EcbatanLocation"
+DB_PATH="/var/lib/EcbatanLocation/planning.db"
 DATE=$(date +%Y%m%d_%H%M%S)
 
 mkdir -p "$BACKUP_DIR"
@@ -158,26 +158,26 @@ ls -t "$BACKUP_DIR"/planning_*.db | tail -n +31 | xargs -r rm
 ```
 
 ```bash
-sudo chmod +x /opt/planninglocation/backup.sh
+sudo chmod +x /opt/EcbatanLocation/backup.sh
 ```
 
 Ajouter au crontab (`sudo crontab -e`) :
 
 ```cron
-0 2 * * * /opt/planninglocation/backup.sh
+0 2 * * * /opt/EcbatanLocation/backup.sh
 ```
 
 ## 9. Mise à jour de l'application
 
 ```bash
 # Sur la machine de build
-dotnet publish src/PlanningLocation.Web -c Release -o ./publish --self-contained -r linux-x64
+dotnet publish src/EcbatanLocation.Web -c Release -o ./publish --self-contained -r linux-x64
 
 # Transfert
-rsync -avz ./publish/ user@serveur:/opt/planninglocation/
+rsync -avz ./publish/ user@serveur:/opt/EcbatanLocation/
 
 # Sur le serveur
-sudo systemctl restart planninglocation
+sudo systemctl restart EcbatanLocation
 ```
 
 ## 10. Vérifications post-déploiement
@@ -186,4 +186,4 @@ sudo systemctl restart planninglocation
 2. Se connecter avec un compte propriétaire → mode propriétaire actif
 3. Créer une réservation test → vérifier la persistence (rafraîchir la page)
 4. Vérifier les headers de sécurité : `curl -I https://planning.votredomaine.fr`
-5. Vérifier les logs : `sudo journalctl -u planninglocation --since "5 minutes ago"`
+5. Vérifier les logs : `sudo journalctl -u EcbatanLocation --since "5 minutes ago"`

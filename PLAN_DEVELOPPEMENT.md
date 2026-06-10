@@ -1,4 +1,4 @@
-# Plan de développement - Planning Location
+# Plan de développement - Ecbatan Location
 
 ## Vue d'ensemble
 
@@ -13,7 +13,7 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
 ### Tâches
 
 1. **Créer la structure de la solution**
-   - Solution `PlanningLocation.sln`
+   - Solution `EcbatanLocation.sln`
    - Projets : Domain, Application, Infrastructure, Web (Blazor Server)
    - Projets de tests : Domain.Tests, Application.Tests, Infrastructure.Tests
    - Références inter-projets (Domain ← Application ← Infrastructure ← Web)
@@ -25,7 +25,7 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
    - Web : Blazor Server
 
 3. **Configurer EF Core + SQLite**
-   - `PlanningLocationDbContext` dans Infrastructure
+   - `EcbatanLocationDbContext` dans Infrastructure
    - Connection string dans `appsettings.json`
    - Configuration Identity (IdentityUser étendu pour les propriétaires)
 
@@ -393,7 +393,7 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
     - Prépare les futures notifications / audit (nice-to-have ultérieurs).
 
 11. ✅ **Tester la couche Application**
-    - Le projet `PlanningLocation.Application.Tests` ne contient aujourd'hui aucun test.
+    - Le projet `EcbatanLocation.Application.Tests` ne contient aujourd'hui aucun test.
     - Couvrir les handlers (création, modification, transitions de statut, estimation multi-lignes) et les validators FluentValidation, avec repositories mockés.
 
 ### UI / UX
@@ -488,4 +488,4 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
 | Microsoft.AspNetCore.Identity.EntityFrameworkCore | Infrastructure | Identity |
 | Microsoft.AspNetCore.Components.Authorization | Web | Auth Blazor |
 
-> **CQRS** : assuré par un **médiateur maison** (`PlanningLocation.Application/Messaging`), sans dépendance externe. MediatR a été retiré (passé sous licence commerciale en v13+) au profit d'une solution 100 % open source.
+> **CQRS** : assuré par un **médiateur maison** (`EcbatanLocation.Application/Messaging`), sans dépendance externe. MediatR a été retiré (passé sous licence commerciale en v13+) au profit d'une solution 100 % open source.

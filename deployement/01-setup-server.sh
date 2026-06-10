@@ -7,9 +7,9 @@ set -euo pipefail
 # ============================================================
 
 APP_USER="planning"
-APP_DIR="/var/www/planning-location"
-DATA_DIR="/var/www/planning-location/data"
-BACKUP_DIR="/var/backups/planning-location"
+APP_DIR="/var/www/ecbatan-location"
+DATA_DIR="/var/www/ecbatan-location/data"
+BACKUP_DIR="/var/backups/ecbatan-location"
 
 echo "==> Mise à jour du système..."
 apt update && apt upgrade -y
@@ -74,9 +74,9 @@ systemctl restart fail2ban
 
 # --- Service systemd ---
 echo "==> Installation du service systemd..."
-cp /tmp/deployement/systemd/planning-location.service /etc/systemd/system/
+cp /tmp/deployement/systemd/ecbatan-location.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable planning-location
+systemctl enable ecbatan-location
 
 # --- Backup cron ---
 echo "==> Installation du script de backup..."
@@ -89,8 +89,8 @@ EOF
 
 # --- Logrotate ---
 echo "==> Configuration du logrotate..."
-cat > /etc/logrotate.d/planning-location << 'EOF'
-/var/www/planning-location/logs/*.log {
+cat > /etc/logrotate.d/ecbatan-location << 'EOF'
+/var/www/ecbatan-location/logs/*.log {
     daily
     missingok
     rotate 14
@@ -100,7 +100,7 @@ cat > /etc/logrotate.d/planning-location << 'EOF'
     create 0644 planning planning
     sharedscripts
     postrotate
-        systemctl restart planning-location
+        systemctl restart ecbatan-location
     endscript
 }
 EOF

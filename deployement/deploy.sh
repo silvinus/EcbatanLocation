@@ -15,9 +15,9 @@ fi
 
 HOST="$1"
 USER="${2:-root}"
-APP_DIR="/var/www/planning-location"
+APP_DIR="/var/www/ecbatan-location"
 PUBLISH_DIR="./publish"
-PROJECT="src/PlanningLocation.Web/PlanningLocation.Web.csproj"
+PROJECT="src/EcbatanLocation.Web/EcbatanLocation.Web.csproj"
 
 echo "==> Compilation en Release..."
 dotnet publish "$PROJECT" \
@@ -39,10 +39,10 @@ echo "==> Correction des permissions..."
 ssh "${USER}@${HOST}" "chown -R planning:planning ${APP_DIR}"
 
 echo "==> Redémarrage de l'application..."
-ssh "${USER}@${HOST}" "systemctl restart planning-location"
+ssh "${USER}@${HOST}" "systemctl restart ecbatan-location"
 
 echo "==> Vérification du statut..."
-ssh "${USER}@${HOST}" "sleep 2 && systemctl is-active planning-location"
+ssh "${USER}@${HOST}" "sleep 2 && systemctl is-active ecbatan-location"
 
 echo ""
 echo "==> Déploiement terminé avec succès !"

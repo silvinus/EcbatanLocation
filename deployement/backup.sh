@@ -7,8 +7,8 @@ set -euo pipefail
 # Rétention : 30 jours
 # ============================================================
 
-DB_PATH="/var/www/planning-location/data/planning.db"
-BACKUP_DIR="/var/backups/planning-location"
+DB_PATH="/var/www/ecbatan-location/data/planning.db"
+BACKUP_DIR="/var/backups/ecbatan-location"
 DATE=$(date +%Y-%m-%d_%H%M)
 RETENTION_DAYS=30
 

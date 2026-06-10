@@ -1,0 +1,114 @@
+@page "/"
+@inject IMediator Mediator
+@rendermode InteractiveServer
+
+<PageTitle>Ecbatan Location</PageTitle>
+
+<div class="layout">
+    <aside class="sidebar card">
+        <div class="hd">
+            <h2>Filtres & synthèse</h2>
+            <span class="pill mono">@Year-@Month.ToString("D2")</span>
+        </div>
+        <div class="bd grid">
+            <FiltersSummary Studios="@_studios"
+                            Owners="@_owners"
+                            Year="@Year"
+                            Month="@Month"
+                            SelectedStudioId="@SelectedStudioId"
+                            SelectedStatus="@SelectedStatus"
+                            SelectedOwnerId="@SelectedOwnerId"
+                            SelectedDate="@_selectedDate"
+                            RangeStart="@_rangeStart"
+                            RangeEnd="@_rangeEnd"
+                            Occupation="@_occupation"
+                            RangeOccupation="@_rangeOccupation"
+                            OnYearMonthChanged="OnYearMonthChanged"
+                            OnStudioChanged="OnStudioChanged"
+                            OnStatusChanged="OnStatusChanged"
+                            OnOwnerChanged="OnOwnerChanged"
+                            OnClearRange="ClearRange" />
+        </div>
+    </aside>
+
+    <main class="card">
+        <div class="hd">
+            <div class="month-nav">
+                <button class="btn-nav" @onclick="PreviousMonth" aria-label="Mois précédent">&lt;</button>
+                <span class="month-label">@GetMonthLabel()</span>
+                <button class="btn-nav" @onclick="NextMonth" aria-label="Mois suivant">&gt;</button>
+            </div>
+            <div class="toolbar">
+                <div class="chips">
+                    <button class="chip @(_viewMode == ViewMode.Month ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.Month)" @onclick='() => _viewMode = ViewMode.Month'>Mois</button>
+                    <button class="chip @(_viewMode == ViewMode.Week ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.Week)" @onclick="SwitchToWeekView">Semaine</button>
+                    <button class="chip @(_viewMode == ViewMode.List ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.List)" @onclick='() => _viewMode = ViewMode.List'>Liste</button>
+                </div>
+                @if (_isAuthenticated)
+                {
+                    <button class="btn primary" @onclick="OpenCreateModal">+ Nouvelle réservation</button>
+                }
+            </div>
+        </div>
+        <div class="bd planning">
+            @if (_loading)
+            {
+                <div class="loading-indicator">Chargement du planning...</div>
+            }
+            else if (_planning is not null)
+            {
+                @if (_viewMode == ViewMode.Month)
+                {
+                    <PlanningGrid Planning="@_planning"
+                                  Year="@Year"
+                                  Month="@Month"
+                                  SelectedDate="@_selectedDate"
+                                  RangeStart="@_rangeStart"
+                                  RangeEnd="@_rangeEnd"
+                                  OnDaySelected="OnDaySelected"
+                                  OnReservationClicked="OnReservationClicked" />
+                }
+                else if (_viewMode == ViewMode.Week)
+                {
+                    <PlanningWeekView Planning="@_planning"
+                                      WeekStart="@_weekStart"
+                                      SelectedDate="@_selectedDate"
+                                      OnDaySelected="OnDaySelected"
+                                      OnReservationClicked="OnReservationClicked" />
+                }
+                else if (_viewMode == ViewMode.List)
+                {
+                    <PlanningListView Planning="@_planning"
+                                      OnReservationClicked="OnReservationClicked" />
+                }
+            }
+        </div>
+    </main>
+</div>
+
+@if (_selectedReservation is not null && !_showFormModal && !_showDeleteModal)
+{
+    <ReservationDetailModal Reservation="@_selectedReservation"
+                            IsAuthenticated="@_isAuthenticated"
+                            CurrentOwnerName="@_currentOwner?.Name"
+                            OnClose="CloseDetailModal"
+                            OnEdit="OpenEditModal"
+                            OnDelete="OpenDeleteModal"
+                            OnStatusChanged="OnReservationStatusChanged" />
+}
+
+@if (_showFormModal)
+{
+    <ReservationFormModal Studios="@(_studios ?? [])"
+                          CurrentOwnerId="@(_currentOwner?.Id ?? Guid.Empty)"
+                          EditReservation="@_editingReservation"
+                          OnSaved="OnFormSaved"
+                          OnCancel="CloseFormModal" />
+}
+
+@if (_showDeleteModal && _deletingReservation is not null)
+{
+    <DeleteConfirmModal Reservation="@_deletingReservation"
+                        OnDeleted="OnDeleted"
+                        OnCancel="CloseDeleteModal" />
+}

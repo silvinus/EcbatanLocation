@@ -1,4 +1,4 @@
-# Planning Location - Application de gestion de location saisonnière
+# Ecbatan Location - Application de gestion de location saisonnière
 
 ## Contexte projet
 
@@ -19,16 +19,16 @@ Le planning est consultable publiquement (lecture seule) et éditable par les pr
 ## Architecture de la solution
 
 ```
-PlanningLocation.sln
+EcbatanLocation.sln
 ├── src/
-│   ├── PlanningLocation.Domain/           # Entités, Value Objects, Règles métier, Interfaces repos
-│   ├── PlanningLocation.Application/      # Commands, Queries, Handlers (MediatR), DTOs, Validators
-│   ├── PlanningLocation.Infrastructure/   # EF Core DbContext, Repositories, Identity config, Migrations
-│   └── PlanningLocation.Web/              # Blazor Server, Pages, Components, Program.cs
+│   ├── EcbatanLocation.Domain/           # Entités, Value Objects, Règles métier, Interfaces repos
+│   ├── EcbatanLocation.Application/      # Commands, Queries, Handlers (MediatR), DTOs, Validators
+│   ├── EcbatanLocation.Infrastructure/   # EF Core DbContext, Repositories, Identity config, Migrations
+│   └── EcbatanLocation.Web/              # Blazor Server, Pages, Components, Program.cs
 └── tests/
-    ├── PlanningLocation.Domain.Tests/
-    ├── PlanningLocation.Application.Tests/
-    └── PlanningLocation.Infrastructure.Tests/
+    ├── EcbatanLocation.Domain.Tests/
+    ├── EcbatanLocation.Application.Tests/
+    └── EcbatanLocation.Infrastructure.Tests/
 ```
 
 ### Principes DDD
@@ -146,17 +146,17 @@ Transition : Demande → Acceptée → Confirmée. Chaque transition enregistre 
 
 ```bash
 # Créer la solution
-dotnet new sln -n PlanningLocation
+dotnet new sln -n EcbatanLocation
 
 # Restaurer les dépendances
 dotnet restore
 
 # Lancer l'application
-dotnet run --project src/PlanningLocation.Web
+dotnet run --project src/EcbatanLocation.Web
 
 # Migrations EF Core
-dotnet ef migrations add <NomMigration> --project src/PlanningLocation.Infrastructure --startup-project src/PlanningLocation.Web
-dotnet ef database update --project src/PlanningLocation.Infrastructure --startup-project src/PlanningLocation.Web
+dotnet ef migrations add <NomMigration> --project src/EcbatanLocation.Infrastructure --startup-project src/EcbatanLocation.Web
+dotnet ef database update --project src/EcbatanLocation.Infrastructure --startup-project src/EcbatanLocation.Web
 
 # Tests
 dotnet test

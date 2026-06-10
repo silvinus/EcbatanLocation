@@ -1,0 +1,64 @@
+@inject IMediator Mediator
+
+<div class="modal-overlay" @onclick="OnCancel">
+    <div class="modal-content" style="max-width:440px" role="dialog" aria-modal="true" aria-label="Supprimer la réservation" @onclick:stopPropagation="true">
+        <div class="modal-hd">
+            <h3>Supprimer la réservation</h3>
+            <button class="x" @onclick="OnCancel">Fermer</button>
+        </div>
+        <div class="modal-bd">
+            @if (_errorMessage is not null)
+            {
+                <div class="alert-error">@_errorMessage</div>
+            }
+
+            <p style="margin:0 0 14px">
+                Supprimer la réservation de <b>@Reservation.TenantName</b>
+                du @Reservation.StartDate.ToString("dd/MM/yyyy") au @Reservation.EndDate.ToString("dd/MM/yyyy")
+                (@Reservation.Studio.Name) ?
+            </p>
+            <p class="hint">Cette action est irréversible.</p>
+
+            <div class="modal-actions">
+                <button class="btn" @onclick="OnCancel">Annuler</button>
+                <button class="btn danger" @onclick="Delete" disabled="@_deleting">
+                    @(_deleting ? "Suppression..." : "Supprimer")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ReservationDetailDto Reservation { get; set; } = default!;
+    [Parameter] public EventCallback OnDeleted { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string? _errorMessage;
+    private bool _deleting;
+
+    private async Task Delete()
+    {
+        _errorMessage = null;
+        _deleting = true;
+
+        try
+        {
+            await Mediator.Send(
+                new EcbatanLocation.Application.Commands.DeleteReservation.DeleteReservationCommand(Reservation.Id));
+            await OnDeleted.InvokeAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            _errorMessage = "Vous devez être connecté pour effectuer cette action.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
+}
