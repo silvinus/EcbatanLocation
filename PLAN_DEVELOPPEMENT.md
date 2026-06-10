@@ -478,11 +478,14 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
 
 | Package | Projet | Usage |
 |---------|--------|-------|
-| MediatR | Application | CQRS |
 | FluentValidation | Application | Validation commands |
 | FluentValidation.DependencyInjectionExtensions | Application | Auto-registration |
+| Microsoft.Extensions.DependencyInjection.Abstractions | Application | DI (médiateur maison) |
+| Microsoft.Extensions.Logging.Abstractions | Application | Logging (handlers d'events) |
 | Microsoft.EntityFrameworkCore | Infrastructure | ORM |
 | Microsoft.EntityFrameworkCore.Sqlite | Infrastructure | Provider SQLite |
 | Microsoft.EntityFrameworkCore.Tools | Infrastructure | Migrations |
 | Microsoft.AspNetCore.Identity.EntityFrameworkCore | Infrastructure | Identity |
 | Microsoft.AspNetCore.Components.Authorization | Web | Auth Blazor |
+
+> **CQRS** : assuré par un **médiateur maison** (`PlanningLocation.Application/Messaging`), sans dépendance externe. MediatR a été retiré (passé sous licence commerciale en v13+) au profit d'une solution 100 % open source.
