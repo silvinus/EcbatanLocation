@@ -1,5 +1,10 @@
 # Ecbatan Location
 
+[![CI](https://github.com/silvinus/EcbatanLocation/actions/workflows/ci.yml/badge.svg)](https://github.com/silvinus/EcbatanLocation/actions/workflows/ci.yml)
+[![Release](https://github.com/silvinus/EcbatanLocation/actions/workflows/release.yml/badge.svg)](https://github.com/silvinus/EcbatanLocation/actions/workflows/release.yml)
+![.NET 10](https://img.shields.io/badge/.NET-10.0-512bd4)
+![License](https://img.shields.io/badge/license-private-gray)
+
 Application web de gestion d'un planning de location saisonnière pour une maison de vacances partagée entre 4 copropriétaires (Léa, Sarah, Jean, Christophe).
 
 Le planning est consultable publiquement en lecture seule et éditable par les propriétaires authentifiés.
