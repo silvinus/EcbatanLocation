@@ -1,4 +1,5 @@
 using PlanningLocation.Domain.Entities;
+using PlanningLocation.Domain.Exceptions;
 using PlanningLocation.Domain.ValueObjects;
 
 namespace PlanningLocation.Domain.Services;
@@ -28,7 +29,6 @@ public class ReservationDomainService
     public void ValidateNoOverlap(bool overlapExists)
     {
         if (overlapExists)
-            throw new InvalidOperationException(
-                "A reservation already exists on this studio for the requested dates.");
+            throw new OverlappingReservationException();
     }
 }

@@ -7,9 +7,9 @@ namespace PlanningLocation.Application.Queries.GetRangeOccupation;
 
 public class GetRangeOccupationQueryHandler(
     IReservationRepository reservationRepository,
-    IStudioRepository studioRepository) : IRequestHandler<GetRangeOccupationQuery, OccupationRangeDto>
+    IStudioRepository studioRepository) : IRequestHandler<GetRangeOccupationQuery, RangeOccupationDto>
 {
-    public async Task<OccupationRangeDto> Handle(GetRangeOccupationQuery request, CancellationToken cancellationToken)
+    public async Task<RangeOccupationDto> Handle(GetRangeOccupationQuery request, CancellationToken cancellationToken)
     {
         var studios = await studioRepository.GetAllAsync(cancellationToken);
         var totalCapacity = studios.Sum(s => s.Capacity);
@@ -37,7 +37,7 @@ public class GetRangeOccupationQueryHandler(
             ? (double)totalOccupiedPlaces / (days * totalCapacity) * 100
             : 0;
 
-        return new OccupationRangeDto(
+        return new RangeOccupationDto(
             request.StartDate,
             request.EndDate,
             totalCapacity,

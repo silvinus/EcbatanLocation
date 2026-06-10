@@ -216,16 +216,19 @@ public class ReservationRepositoryTests : IDisposable
     public async Task GetByOwnerAndOverlappingDatesAsync_FiltersCorrectly()
     {
         var owner2 = Owner.Create("Sarah", "user-2");
+        var studio2 = Studio.Create("Studio Est", 2, true, true, 2);
         await using (var ctx = _factory.CreateContext())
         {
             ctx.Owners.Add(owner2);
+            ctx.Studios.Add(studio2);
             await ctx.SaveChangesAsync();
         }
 
+        // Same dates but different studios: no overlap, so both can be persisted.
         var dates1 = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
         var dates2 = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
         var r1 = MakeReservation(_studioId, _ownerId, dates1, "ByOwner1", adults: 1);
-        var r2 = MakeReservation(_studioId, owner2.Id, dates2, "ByOwner2", adults: 1);
+        var r2 = MakeReservation(studio2.Id, owner2.Id, dates2, "ByOwner2", adults: 1, capacity: 2);
 
         await using (var ctx = _factory.CreateContext())
         {

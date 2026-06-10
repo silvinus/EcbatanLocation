@@ -1,6 +1,6 @@
 namespace PlanningLocation.Application.DTOs;
 
-public record OccupationJourDto(
+public record DailyOccupationDto(
     DateOnly Date,
     int TotalCapacity,
     int OccupiedPlaces,

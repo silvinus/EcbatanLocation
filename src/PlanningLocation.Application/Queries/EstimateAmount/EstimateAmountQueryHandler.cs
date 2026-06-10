@@ -1,5 +1,4 @@
 using MediatR;
-using PlanningLocation.Domain.Enums;
 using PlanningLocation.Domain.Repositories;
 using PlanningLocation.Domain.ValueObjects;
 
@@ -14,14 +13,9 @@ public class EstimateAmountQueryHandler(
         var grid = await pricingGridRepository.GetByYearAsync(request.StartDate.Year, cancellationToken)
                    ?? throw new InvalidOperationException($"No pricing grid found for year {request.StartDate.Year}.");
 
-        var total = 0m;
-        foreach (var line in request.PersonLines)
-        {
-            var rate = grid.GetRate(line.ClientType);
-            var childRate = line.ClientType == ClientType.Acquaintance ? rate * 0.5m : rate;
-            total += (line.AdultCount * rate + line.ChildrenUnder3Count * childRate) * dates.NumberOfDays;
-        }
+        var personLines = request.PersonLines
+            .Select(pl => new PersonLine(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count));
 
-        return total;
+        return grid.CalculateAmount(personLines, dates.NumberOfDays);
     }
 }

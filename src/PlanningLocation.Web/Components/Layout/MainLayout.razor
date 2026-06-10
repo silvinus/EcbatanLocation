@@ -17,7 +17,9 @@
             <ThemeSwitcher />
             <AuthorizeView>
                 <Authorized>
-                    <a href="/admin" class="btn">Administration</a>
+                    <AuthorizeView Roles="Admin" Context="adminContext">
+                        <a href="/admin" class="btn">Administration</a>
+                    </AuthorizeView>
                     <a href="/change-password" class="btn">Mot de passe</a>
                     <span class="pill pill-auth">Connecté</span>
                     <a href="/api/auth/logout" class="btn">Déconnexion</a>

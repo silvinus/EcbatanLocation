@@ -79,7 +79,7 @@
 </table>
 
 @code {
-    [Parameter, EditorRequired] public PlanningMensuelDto Planning { get; set; } = default!;
+    [Parameter, EditorRequired] public MonthlyPlanningDto Planning { get; set; } = default!;
     [Parameter] public int Year { get; set; }
     [Parameter] public int Month { get; set; }
     [Parameter] public DateOnly? SelectedDate { get; set; }

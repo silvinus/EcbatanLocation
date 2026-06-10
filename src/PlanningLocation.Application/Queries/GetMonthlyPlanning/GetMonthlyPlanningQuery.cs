@@ -9,4 +9,4 @@ public record GetMonthlyPlanningQuery(
     int Month,
     Guid? StudioId = null,
     ReservationStatus? Status = null,
-    Guid? OwnerId = null) : IRequest<PlanningMensuelDto>;
+    Guid? OwnerId = null) : IRequest<MonthlyPlanningDto>;

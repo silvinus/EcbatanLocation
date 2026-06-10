@@ -61,7 +61,7 @@
 </table>
 
 @code {
-    [Parameter, EditorRequired] public PlanningMensuelDto Planning { get; set; } = default!;
+    [Parameter, EditorRequired] public MonthlyPlanningDto Planning { get; set; } = default!;
     [Parameter] public DateOnly WeekStart { get; set; }
     [Parameter] public DateOnly? SelectedDate { get; set; }
     [Parameter] public EventCallback<DateOnly> OnDaySelected { get; set; }

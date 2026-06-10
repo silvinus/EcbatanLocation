@@ -6,6 +6,6 @@ namespace PlanningLocation.Application.Commands.UpdatePricingGrid;
 
 public record UpdatePricingGridCommand(
     int Year,
-    IReadOnlyList<PricingLineInput> Lines) : IRequest, IRequireAuthorization;
+    IReadOnlyList<PricingLineInput> Lines) : IRequest, IRequireAdmin;
 
 public record PricingLineInput(ClientType ClientType, decimal PricePerDayPerPerson);

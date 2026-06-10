@@ -124,14 +124,14 @@
     private ReservationStatus? SelectedStatus { get; set; }
     private Guid? SelectedOwnerId { get; set; }
 
-    private PlanningMensuelDto? _planning;
+    private MonthlyPlanningDto? _planning;
     private IReadOnlyList<StudioDto>? _studios;
     private IReadOnlyList<OwnerDto>? _owners;
     private DateOnly? _selectedDate;
     private DateOnly? _rangeStart;
     private DateOnly? _rangeEnd;
-    private OccupationJourDto? _occupation;
-    private OccupationRangeDto? _rangeOccupation;
+    private DailyOccupationDto? _occupation;
+    private RangeOccupationDto? _rangeOccupation;
     private ReservationDetailDto? _selectedReservation;
 
     private bool _isAuthenticated;

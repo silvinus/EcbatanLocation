@@ -3,4 +3,4 @@ using PlanningLocation.Application.DTOs;
 
 namespace PlanningLocation.Application.Queries.GetDailyOccupation;
 
-public record GetDailyOccupationQuery(DateOnly Date) : IRequest<OccupationJourDto>;
+public record GetDailyOccupationQuery(DateOnly Date) : IRequest<DailyOccupationDto>;

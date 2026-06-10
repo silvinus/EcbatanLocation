@@ -57,7 +57,7 @@ else
 }
 
 @code {
-    [Parameter, EditorRequired] public PlanningMensuelDto Planning { get; set; } = default!;
+    [Parameter, EditorRequired] public MonthlyPlanningDto Planning { get; set; } = default!;
     [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
 
     private async Task OnClick(Guid id) => await OnReservationClicked.InvokeAsync(id);

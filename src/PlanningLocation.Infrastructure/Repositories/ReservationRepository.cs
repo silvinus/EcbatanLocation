@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using PlanningLocation.Domain.Entities;
+using PlanningLocation.Domain.Exceptions;
 using PlanningLocation.Domain.Repositories;
 using PlanningLocation.Domain.ValueObjects;
 using PlanningLocation.Infrastructure.Persistence;
@@ -39,15 +40,57 @@ public class ReservationRepository(PlanningLocationDbContext context) : IReserva
 
     public async Task AddAsync(Reservation reservation, CancellationToken ct = default)
     {
+        await using var tx = await context.Database.BeginTransactionAsync(ct);
+
+        await GuardNoOverlapAsync(reservation, ct);
         await context.Reservations.AddAsync(reservation, ct);
-        await context.SaveChangesAsync(ct);
+        await SaveTranslatingOverlapAsync(ct);
+
+        await tx.CommitAsync(ct);
     }
 
     public async Task UpdateAsync(Reservation reservation, CancellationToken ct = default)
     {
+        await using var tx = await context.Database.BeginTransactionAsync(ct);
+
+        await GuardNoOverlapAsync(reservation, ct);
         context.Reservations.Update(reservation);
-        await context.SaveChangesAsync(ct);
+        await SaveTranslatingOverlapAsync(ct);
+
+        await tx.CommitAsync(ct);
     }
+
+    /// <summary>
+    /// Authoritative overlap check performed inside the write transaction, closing the
+    /// time-of-check/time-of-use race between the UI pre-check and persistence.
+    /// The unique index on (StudioId, StartDate, EndDate) is the final database-level backstop.
+    /// </summary>
+    private async Task GuardNoOverlapAsync(Reservation reservation, CancellationToken ct)
+    {
+        var overlap = await context.Reservations
+            .Where(r => r.StudioId == reservation.StudioId && r.Id != reservation.Id)
+            .AnyAsync(
+                r => r.Dates.StartDate < reservation.Dates.EndDate && r.Dates.EndDate > reservation.Dates.StartDate,
+                ct);
+
+        if (overlap)
+            throw new OverlappingReservationException();
+    }
+
+    private async Task SaveTranslatingOverlapAsync(CancellationToken ct)
+    {
+        try
+        {
+            await context.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (IsUniqueOverlapViolation(ex))
+        {
+            throw new OverlappingReservationException();
+        }
+    }
+
+    private static bool IsUniqueOverlapViolation(DbUpdateException ex)
+        => ex.InnerException?.Message.Contains("IX_Reservations_StudioId_StartDate_EndDate") == true;
 
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {

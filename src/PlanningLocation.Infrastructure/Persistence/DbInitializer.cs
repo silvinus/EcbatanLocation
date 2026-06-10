@@ -20,8 +20,42 @@ public static class DbInitializer
 
         await SeedRolesAsync(roleManager);
         await SeedOwnersAsync(context, userManager);
+        await EnsureAdminsAsync(userManager);
         await SeedStudiosAsync(context);
         await SeedPricingGridAsync(context);
+    }
+
+    /// <summary>
+    /// Idempotent: grants the Admin role to Christophe (owner + admin) and ensures the
+    /// dedicated technical admin account "Sylvain" exists with the Admin role.
+    /// Runs on every startup so it also upgrades already-seeded databases.
+    /// </summary>
+    private static async Task EnsureAdminsAsync(UserManager<ApplicationUser> userManager)
+    {
+        var christophe = await userManager.FindByEmailAsync("christophe@planninglocation.fr");
+        if (christophe is not null && !await userManager.IsInRoleAsync(christophe, "Admin"))
+            await userManager.AddToRoleAsync(christophe, "Admin");
+
+        const string sylvainEmail = "sylvain@planninglocation.fr";
+        var sylvain = await userManager.FindByEmailAsync(sylvainEmail);
+        if (sylvain is null)
+        {
+            sylvain = new ApplicationUser
+            {
+                UserName = sylvainEmail,
+                Email = sylvainEmail,
+                DisplayName = "Sylvain",
+                EmailConfirmed = true
+            };
+
+            var result = await userManager.CreateAsync(sylvain, "Password123!");
+            if (result.Succeeded)
+                await userManager.AddToRoleAsync(sylvain, "Admin");
+        }
+        else if (!await userManager.IsInRoleAsync(sylvain, "Admin"))
+        {
+            await userManager.AddToRoleAsync(sylvain, "Admin");
+        }
     }
 
     private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)

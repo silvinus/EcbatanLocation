@@ -1,6 +1,6 @@
 namespace PlanningLocation.Application.DTOs;
 
-public record PlanningMensuelDto(
+public record MonthlyPlanningDto(
     int Year,
     int Month,
     IReadOnlyList<StudioPlanningDto> Studios);

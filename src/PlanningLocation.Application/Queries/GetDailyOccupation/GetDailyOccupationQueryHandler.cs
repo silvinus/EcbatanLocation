@@ -9,9 +9,9 @@ namespace PlanningLocation.Application.Queries.GetDailyOccupation;
 // A studio is counted as a whole (free or occupied).
 public class GetDailyOccupationQueryHandler(
     IReservationRepository reservationRepository,
-    IStudioRepository studioRepository) : IRequestHandler<GetDailyOccupationQuery, OccupationJourDto>
+    IStudioRepository studioRepository) : IRequestHandler<GetDailyOccupationQuery, DailyOccupationDto>
 {
-    public async Task<OccupationJourDto> Handle(GetDailyOccupationQuery request, CancellationToken cancellationToken)
+    public async Task<DailyOccupationDto> Handle(GetDailyOccupationQuery request, CancellationToken cancellationToken)
     {
         var studios = await studioRepository.GetAllAsync(cancellationToken);
         var reservations = await reservationRepository.GetByDateAsync(request.Date, cancellationToken);
@@ -25,7 +25,7 @@ public class GetDailyOccupationQueryHandler(
         var totalCapacity = studios.Sum(s => s.Capacity);
         var occupiedPlaces = studios.Where(s => occupiedStudioIds.Contains(s.Id)).Sum(s => s.Capacity);
 
-        return new OccupationJourDto(
+        return new DailyOccupationDto(
             request.Date,
             totalCapacity,
             occupiedPlaces,

@@ -146,8 +146,8 @@ else if (RangeStart.HasValue && !RangeEnd.HasValue)
     [Parameter] public DateOnly? SelectedDate { get; set; }
     [Parameter] public DateOnly? RangeStart { get; set; }
     [Parameter] public DateOnly? RangeEnd { get; set; }
-    [Parameter] public OccupationJourDto? Occupation { get; set; }
-    [Parameter] public OccupationRangeDto? RangeOccupation { get; set; }
+    [Parameter] public DailyOccupationDto? Occupation { get; set; }
+    [Parameter] public RangeOccupationDto? RangeOccupation { get; set; }
     [Parameter] public EventCallback<(int year, int month)> OnYearMonthChanged { get; set; }
     [Parameter] public EventCallback<Guid?> OnStudioChanged { get; set; }
     [Parameter] public EventCallback<ReservationStatus?> OnStatusChanged { get; set; }

@@ -7,9 +7,9 @@ namespace PlanningLocation.Application.Queries.GetMonthlyPlanning;
 public class GetMonthlyPlanningQueryHandler(
     IReservationRepository reservationRepository,
     IStudioRepository studioRepository,
-    IOwnerRepository ownerRepository) : IRequestHandler<GetMonthlyPlanningQuery, PlanningMensuelDto>
+    IOwnerRepository ownerRepository) : IRequestHandler<GetMonthlyPlanningQuery, MonthlyPlanningDto>
 {
-    public async Task<PlanningMensuelDto> Handle(GetMonthlyPlanningQuery request, CancellationToken cancellationToken)
+    public async Task<MonthlyPlanningDto> Handle(GetMonthlyPlanningQuery request, CancellationToken cancellationToken)
     {
         var studios = await studioRepository.GetAllAsync(cancellationToken);
         var owners = await ownerRepository.GetAllAsync(cancellationToken);
@@ -51,6 +51,6 @@ public class GetMonthlyPlanningQueryHandler(
                     : []))
             .ToList();
 
-        return new PlanningMensuelDto(request.Year, request.Month, studioPlannings);
+        return new MonthlyPlanningDto(request.Year, request.Month, studioPlannings);
     }
 }

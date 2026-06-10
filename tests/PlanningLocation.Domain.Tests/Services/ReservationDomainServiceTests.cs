@@ -1,5 +1,6 @@
 using PlanningLocation.Domain.Entities;
 using PlanningLocation.Domain.Enums;
+using PlanningLocation.Domain.Exceptions;
 using PlanningLocation.Domain.Services;
 using PlanningLocation.Domain.ValueObjects;
 
@@ -99,7 +100,7 @@ public class ReservationDomainServiceTests
     [Fact]
     public void ValidateNoOverlap_OverlapExists_Throws()
     {
-        Assert.Throws<InvalidOperationException>(() =>
+        Assert.Throws<OverlappingReservationException>(() =>
             _service.ValidateNoOverlap(true));
     }
 }

@@ -1,6 +1,6 @@
 namespace PlanningLocation.Application.DTOs;
 
-public record OccupationRangeDto(
+public record RangeOccupationDto(
     DateOnly StartDate,
     DateOnly EndDate,
     int TotalCapacity,
