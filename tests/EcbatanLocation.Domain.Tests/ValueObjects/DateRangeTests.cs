@@ -97,6 +97,63 @@ public class DateRangeTests
         Assert.False(range.ContainsDay(new DateOnly(2026, 7, 2)));
     }
 
+    // --- Contains ---
+
+    [Fact]
+    public void Contains_InnerRange_ReturnsTrue()
+    {
+        var outer = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 15));
+        var inner = new DateRange(new DateOnly(2026, 7, 3), new DateOnly(2026, 7, 10));
+
+        Assert.True(outer.Contains(inner));
+    }
+
+    [Fact]
+    public void Contains_IdenticalRange_ReturnsTrue()
+    {
+        var a = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
+        var b = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
+
+        Assert.True(a.Contains(b));
+    }
+
+    [Fact]
+    public void Contains_OverflowStart_ReturnsFalse()
+    {
+        var outer = new DateRange(new DateOnly(2026, 7, 5), new DateOnly(2026, 7, 15));
+        var inner = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
+
+        Assert.False(outer.Contains(inner));
+    }
+
+    [Fact]
+    public void Contains_OverflowEnd_ReturnsFalse()
+    {
+        var outer = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
+        var inner = new DateRange(new DateOnly(2026, 7, 5), new DateOnly(2026, 7, 15));
+
+        Assert.False(outer.Contains(inner));
+    }
+
+    [Fact]
+    public void Contains_NoOverlap_ReturnsFalse()
+    {
+        var a = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 5));
+        var b = new DateRange(new DateOnly(2026, 7, 10), new DateOnly(2026, 7, 15));
+
+        Assert.False(a.Contains(b));
+    }
+
+    [Fact]
+    public void Contains_IsNotSymmetric()
+    {
+        var outer = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 15));
+        var inner = new DateRange(new DateOnly(2026, 7, 3), new DateOnly(2026, 7, 10));
+
+        Assert.True(outer.Contains(inner));
+        Assert.False(inner.Contains(outer));
+    }
+
     [Fact]
     public void Equality_SameValues_AreEqual()
     {
