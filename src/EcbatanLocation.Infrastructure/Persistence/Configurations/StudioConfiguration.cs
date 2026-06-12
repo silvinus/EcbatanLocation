@@ -13,6 +13,7 @@ public class StudioConfiguration : IEntityTypeConfiguration<Studio>
         builder.Property(s => s.Capacity).IsRequired();
         builder.Property(s => s.HasKitchen).IsRequired();
         builder.Property(s => s.RentableAlone).IsRequired();
+        builder.Property(s => s.Unavailable).IsRequired().HasDefaultValue(false);
         builder.Property(s => s.DisplayOrder).IsRequired();
     }
 }

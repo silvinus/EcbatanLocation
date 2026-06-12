@@ -18,6 +18,9 @@ public class UpdateReservationCommandHandler(
         var studio = await studioRepository.GetByIdAsync(request.StudioId, cancellationToken)
                      ?? throw new InvalidOperationException($"Studio '{request.StudioId}' not found.");
 
+        if (studio.Unavailable)
+            throw new InvalidOperationException($"Studio '{studio.Name}' is currently unavailable and cannot be reserved.");
+
         var dates = new DateRange(request.StartDate, request.EndDate);
 
         var overlapExists = await reservationRepository.ExistsOverlapAsync(

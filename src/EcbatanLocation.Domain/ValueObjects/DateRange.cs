@@ -19,6 +19,9 @@ public sealed record DateRange
     public bool Overlaps(DateRange other)
         => StartDate < other.EndDate && other.StartDate < EndDate;
 
+    public bool Contains(DateRange other)
+        => StartDate <= other.StartDate && EndDate >= other.EndDate;
+
     public bool ContainsDay(DateOnly day)
         => day >= StartDate && day < EndDate;
 }

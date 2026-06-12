@@ -13,4 +13,5 @@ public interface IReservationRepository
     Task DeleteAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<Reservation>> GetByOwnerAndOverlappingDatesAsync(Guid ownerId, DateRange dates, CancellationToken ct = default);
     Task<IReadOnlyList<Reservation>> GetByDateAsync(DateOnly date, CancellationToken ct = default);
+    Task<bool> ExistsByOwnerAsync(Guid ownerId, CancellationToken ct = default);
 }

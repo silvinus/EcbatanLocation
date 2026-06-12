@@ -6,4 +6,5 @@ public record StudioDto(
     int Capacity,
     bool HasKitchen,
     bool RentableAlone,
+    bool Unavailable,
     int DisplayOrder);

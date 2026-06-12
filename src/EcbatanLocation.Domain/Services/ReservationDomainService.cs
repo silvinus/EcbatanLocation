@@ -18,7 +18,7 @@ public class ReservationDomainService
         var hasIndependentStudio = ownerReservations.Any(r =>
             r.OwnerId == ownerId
             && r.StudioId != studio.Id
-            && r.Dates.Overlaps(dates));
+            && r.Dates.Contains(dates));
 
         if (!hasIndependentStudio)
             throw new InvalidOperationException(

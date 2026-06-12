@@ -142,6 +142,18 @@ Transition : Demande → Acceptée → Confirmée. Chaque transition enregistre 
 - Un fichier par classe/record/enum
 - Tests unitaires pour les règles métier du domaine
 
+## Workflow Git
+
+La branche `main` est protégée. Toute modification doit passer par une branche + Pull Request :
+
+1. Créer une branche depuis `main` : `git checkout -b <type>/<description-courte>`
+2. Commiter les changements
+3. Pousser la branche : `git push -u origin <branche>`
+4. Ouvrir une PR via `gh pr create`
+5. Le propriétaire merge la PR depuis GitHub
+
+Convention de nommage des branches : `fix/`, `feat/`, `refactor/`, `docs/`, `chore/`.
+
 ## Commandes utiles
 
 ```bash
@@ -167,8 +179,8 @@ dotnet test
 Ces points sont volontairement isolés dans le code (méthode dédiée, point unique de modification) pour pouvoir être changés sans refactoring.
 
 ### H1 — Studio non louable seul
-Un studio `LouableSeul = false` ne peut être réservé que si le même propriétaire possède déjà une réservation sur un studio `LouableSeul = true` dont les dates chevauchent (même partiellement).
-- **Point de modification** : `ReservationDomainService.ValidateStudioDependency()`
+Un studio `LouableSeul = false` ne peut être réservé que si le même propriétaire possède déjà une réservation sur un studio `LouableSeul = true` dont les dates **englobent entièrement** la période demandée (inclusion stricte, pas simple chevauchement).
+- **Point de modification** : `ReservationDomainService.ValidateStudioDependency()` + `DateRange.Contains()`
 
 ### H2 — Places occupées
 Places occupées = capacité max des studios ayant au moins une réservation Acceptée ou Confirmée ce jour-là (pas les Demandes). Un studio est compté en entier (libre ou occupé).

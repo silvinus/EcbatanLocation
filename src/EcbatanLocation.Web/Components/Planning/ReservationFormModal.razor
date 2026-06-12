@@ -25,7 +25,7 @@
                     <label>Studio</label>
                     <select value="@_studioId" @onchange="OnStudioChanged">
                         <option value="">-- Choisir un studio --</option>
-                        @foreach (var s in Studios)
+                        @foreach (var s in Studios.Where(s => !s.Unavailable))
                         {
                             <option value="@s.Id">@s.Name (@s.Capacity pers.@(s.HasKitchen ? ", cuisine" : "")@(!s.RentableAlone ? ", non louable seul" : ""))</option>
                         }
@@ -73,16 +73,10 @@
                             var line = _personLines[index];
                             <div class="person-line-row">
                                 <div class="field" style="flex:2">
-                                    <select value="@line.ClientType" @onchange="e => OnLineTypeChanged(index, e)" disabled="@_isExclusiveType">
-                                        @if (_isExclusiveType)
+                                    <select value="@line.ClientType" @onchange="e => OnLineTypeChanged(index, e)">
+                                        @foreach (var ct in _allowedClientTypes)
                                         {
-                                            <option value="@line.ClientType">@GetClientTypeLabel(line.ClientType)</option>
-                                        }
-                                        else
-                                        {
-                                            <option value="@ClientType.Owner">Propriétaire</option>
-                                            <option value="@ClientType.GuestWithPresence">Invité avec présence</option>
-                                            <option value="@ClientType.Acquaintance">Connaissance</option>
+                                            <option value="@ct">@GetClientTypeLabel(ct)</option>
                                         }
                                     </select>
                                 </div>
@@ -96,17 +90,14 @@
                                            placeholder="Enf."
                                            @onchange="e => OnLineChildrenChanged(index, e)" />
                                 </div>
-                                @if (!_isExclusiveType && _personLines.Count > 1)
+                                @if (_personLines.Count > 1)
                                 {
                                     <button class="x-small" @onclick="() => RemoveLine(index)" title="Supprimer">×</button>
                                 }
                             </div>
                         }
                     </div>
-                    @if (!_isExclusiveType)
-                    {
-                        <button class="btn" style="margin-top:6px;font-size:12px;padding:6px 10px" @onclick="AddLine">+ Ajouter un type</button>
-                    }
+                    <button class="btn" style="margin-top:6px;font-size:12px;padding:6px 10px" @onclick="AddLine">+ Ajouter un type</button>
                 </div>
 
                 <div class="hint">
@@ -164,7 +155,7 @@
     private bool _overlapWarning;
     private bool _checkingOverlap;
     private StudioDto? _selectedStudio;
-    private bool _isExclusiveType;
+    private List<ClientType> _allowedClientTypes = [ClientType.Owner, ClientType.GuestWithPresence, ClientType.Acquaintance];
 
     private int NightCount => _endDate.DayNumber - _startDate.DayNumber;
     private int TotalPersons => _personLines.Sum(l => l.AdultCount + l.ChildrenCount);
@@ -191,41 +182,31 @@
                 .ToList();
             _estimatedAmount = EditReservation.EstimatedAmount;
             _selectedStudio = Studios.FirstOrDefault(s => s.Id == EditReservation.Studio.Id);
-            UpdateExclusiveType();
+            UpdateAllowedClientTypes();
         }
     }
 
-    private void UpdateExclusiveType()
+    private void UpdateAllowedClientTypes()
     {
         if (_selectedStudio is null)
         {
-            _isExclusiveType = false;
-            return;
-        }
-
-        var name = _selectedStudio.Name.ToLowerInvariant();
-        if (name.Contains("mobil"))
-        {
-            _isExclusiveType = true;
-            foreach (var line in _personLines) line.ClientType = ClientType.MobileHome;
-            if (_personLines.Count > 1)
-                _personLines = [_personLines[0]];
-        }
-        else if (name.Contains("tente") || name.Contains("emplacement"))
-        {
-            _isExclusiveType = true;
-            foreach (var line in _personLines) line.ClientType = ClientType.Tent;
-            if (_personLines.Count > 1)
-                _personLines = [_personLines[0]];
+            _allowedClientTypes = [ClientType.Owner, ClientType.GuestWithPresence, ClientType.Acquaintance];
         }
         else
         {
-            _isExclusiveType = false;
-            foreach (var line in _personLines)
-            {
-                if (line.ClientType is ClientType.MobileHome or ClientType.Tent)
-                    line.ClientType = ClientType.Owner;
-            }
+            var name = _selectedStudio.Name.ToLowerInvariant();
+            if (name.Contains("mobil"))
+                _allowedClientTypes = [ClientType.MobileHome, ClientType.Owner, ClientType.GuestWithPresence];
+            else if (name.Contains("tente") || name.Contains("emplacement"))
+                _allowedClientTypes = [ClientType.Tent, ClientType.Owner, ClientType.GuestWithPresence];
+            else
+                _allowedClientTypes = [ClientType.Owner, ClientType.GuestWithPresence, ClientType.Acquaintance];
+        }
+
+        foreach (var line in _personLines)
+        {
+            if (!_allowedClientTypes.Contains(line.ClientType))
+                line.ClientType = _allowedClientTypes[0];
         }
     }
 
@@ -235,7 +216,7 @@
         _selectedStudio = Guid.TryParse(_studioId, out var sid)
             ? Studios.FirstOrDefault(s => s.Id == sid)
             : null;
-        UpdateExclusiveType();
+        UpdateAllowedClientTypes();
         await RefreshEstimateAndOverlap();
     }
 
@@ -277,8 +258,8 @@
     private void AddLine()
     {
         var usedTypes = _personLines.Select(l => l.ClientType).ToHashSet();
-        var nextType = new[] { ClientType.Owner, ClientType.GuestWithPresence, ClientType.Acquaintance }
-            .FirstOrDefault(t => !usedTypes.Contains(t), ClientType.Owner);
+        var nextType = _allowedClientTypes
+            .FirstOrDefault(t => !usedTypes.Contains(t), _allowedClientTypes[0]);
         _personLines.Add(new PersonLineState(nextType, 1, 0));
     }
 

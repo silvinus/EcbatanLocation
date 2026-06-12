@@ -1,0 +1,25 @@
+# fly.toml app configuration file generated for ecbatane-location on 2026-06-12T23:36:19+02:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'ecbatane-location'
+primary_region = 'cdg'
+
+[build]
+
+[[mounts]]
+  source = 'ecbatane_data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  memory = '512mb'
+  cpus = 1
+  memory_mb = 512

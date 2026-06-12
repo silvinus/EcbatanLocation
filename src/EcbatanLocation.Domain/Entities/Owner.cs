@@ -17,4 +17,10 @@ public class Owner
             UserId = userId
         };
     }
+
+    public void Update(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name;
+    }
 }

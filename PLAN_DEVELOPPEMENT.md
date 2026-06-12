@@ -460,6 +460,130 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
 
 ---
 
+## Phase 10 : Bugfix — Règle « studio non louable seul » (H1)
+
+**Objectif** : Corriger la validation des studios non louables seuls. Actuellement un simple chevauchement partiel suffit ; la règle métier exige que la période du studio dépendant soit **entièrement incluse** dans celle de la réservation principale.
+
+### Problème
+
+`ReservationDomainService.ValidateStudioDependency()` utilise `DateRange.Overlaps()` pour valider la dépendance. Un propriétaire peut donc réserver un studio dépendant (ex : Studio Centre) du 3 au 12 juillet alors que sa réservation principale (ex : Villa) ne couvre que le 5 au 10 — les jours 3-4 et 10-12 débordent sans être couverts.
+
+### Tâches
+
+1. **`DateRange.cs`** — Ajouter une méthode `Contains(DateRange other)` : `StartDate <= other.StartDate && EndDate >= other.EndDate`
+
+2. **`ReservationDomainService.cs`** — Dans `ValidateStudioDependency()`, remplacer `r.Dates.Overlaps(dates)` par `r.Dates.Contains(dates)` (la réservation principale doit englober la dépendante)
+
+3. **`ReservationDomainServiceTests.cs`** — Corriger le test existant `WithOverlappingReservation_Passes` (la réservation principale doit englober la dépendante). Ajouter les cas :
+   - Réservation dépendante qui déborde au début → doit échouer
+   - Réservation dépendante qui déborde à la fin → doit échouer
+   - Réservation dépendante qui déborde des deux côtés → doit échouer
+   - Réservation dépendante strictement incluse → doit passer
+
+4. **Tests `DateRange`** — Ajouter des tests unitaires pour `Contains(DateRange)` (inclusion stricte, identique, débordement partiel, aucun chevauchement)
+
+### Approche
+
+Option A retenue : la requête du repository (`GetByOwnerAndOverlappingDatesAsync`) reste inchangée (filtre large par chevauchement). Le filtrage strict par inclusion est fait dans le domain service, ce qui garde le repo réutilisable.
+
+**Livrable** : Correction du bug H1, tests verts couvrant tous les cas limites.
+
+---
+
+## Phase 11 : Gestion des utilisateurs (Admin)
+
+**Objectif** : Permettre à un administrateur de gérer les comptes utilisateurs (propriétaires et administrateurs) depuis l'interface d'administration : ajouter, modifier, supprimer, et régénérer un mot de passe aléatoire.
+
+### Analyse d'impact
+
+| Couche | Fichiers impactés | Nature de l'impact |
+|--------|-------------------|--------------------|
+| **Domain** | `Owner.cs`, `IOwnerRepository.cs` | `Owner.Update()` pour renommer. Ajout de `AddAsync`, `UpdateAsync`, `DeleteAsync` au repository. |
+| **Application** | Nouveaux dossiers Commands + Queries | 5 nouvelles opérations CQRS (voir ci-dessous). Nouveau DTO `UserDto`. |
+| **Infrastructure** | `OwnerRepository.cs`, `DbInitializer.cs` | Implémentation des nouvelles méthodes du repository. Interaction `UserManager` pour Identity. |
+| **Web** | `Admin.razor` | Nouvel onglet « Utilisateurs » dans la page admin existante. |
+| **Tests** | Domain.Tests, Application.Tests | Tests unitaires des nouvelles rules + handlers. |
+
+### Règles métier & contraintes
+
+- Un utilisateur peut avoir le rôle **Owner**, **Admin**, ou les deux (comme Christophe).
+- Un **Owner** a une entrée dans la table `Owners` (liée à `AspNetUsers` via `UserId`). Un Admin pur n'en a pas.
+- **Suppression** : un propriétaire ne peut être supprimé que s'il n'a **aucune réservation** existante (intégrité référentielle). Si des réservations existent, l'admin doit d'abord les réaffecter ou supprimer.
+- **Mot de passe régénéré** : mot de passe aléatoire de 12 caractères (majuscules, minuscules, chiffres, caractère spécial). Affiché **une seule fois** à l'admin dans une modale de confirmation (pas d'envoi email — pas de serveur SMTP configuré).
+- L'admin ne peut pas se supprimer lui-même.
+- Il doit toujours rester au moins un compte Admin.
+
+### Tâches
+
+#### 1. Domain
+
+- **`Owner.cs`** — Ajouter méthode `Update(string name)` pour permettre le renommage.
+- **`IOwnerRepository.cs`** — Ajouter : `Task AddAsync(Owner owner, CancellationToken ct)`, `Task UpdateAsync(Owner owner, CancellationToken ct)`, `Task DeleteAsync(Owner owner, CancellationToken ct)`.
+
+#### 2. Application — Commands
+
+1. **`CreateUserCommand`** (`IRequireAdmin`)
+   - Input : `DisplayName`, `Email`, `Roles[]` (Owner/Admin)
+   - Handler : crée `ApplicationUser` via `UserManager`, assigne les rôles, crée l'entrée `Owner` si rôle Owner, génère un mot de passe aléatoire.
+   - Retour : `CreatedUserResult` contenant le mot de passe généré (affiché une fois).
+
+2. **`UpdateUserCommand`** (`IRequireAdmin`)
+   - Input : `UserId`, `DisplayName`, `Email`, `Roles[]`
+   - Handler : met à jour `ApplicationUser`, ajuste rôles, met à jour ou crée/supprime l'entrée `Owner` selon le changement de rôle.
+
+3. **`DeleteUserCommand`** (`IRequireAdmin`)
+   - Input : `UserId`
+   - Handler : vérifie aucune réservation liée, vérifie que ce n'est pas le dernier admin, supprime `Owner` + `ApplicationUser`.
+
+4. **`ResetPasswordCommand`** (`IRequireAdmin`)
+   - Input : `UserId`
+   - Handler : génère un mot de passe aléatoire via `UserManager.ResetPasswordAsync`, retourne le nouveau mot de passe.
+
+#### 3. Application — Queries
+
+5. **`GetUsersQuery`** (`IRequireAdmin`)
+   - Retour : `IReadOnlyList<UserDto>` — Id, DisplayName, Email, Roles[], IsOwner, HasReservations (pour savoir si supprimable).
+
+#### 4. Application — DTOs & Validators
+
+- **`UserDto`** : `UserId`, `DisplayName`, `Email`, `Roles`, `IsOwner`, `HasReservations`
+- **`CreatedUserResult`** : `UserId`, `GeneratedPassword`
+- **Validators** : email valide et unique, nom non vide, au moins un rôle, mot de passe conforme aux règles Identity.
+
+#### 5. Infrastructure
+
+- **`OwnerRepository.cs`** — Implémenter `AddAsync`, `UpdateAsync`, `DeleteAsync`.
+- **Handlers** — Les handlers `CreateUser`, `UpdateUser`, `DeleteUser`, `ResetPassword` utilisent directement `UserManager<ApplicationUser>` (injecté). Pas besoin d'abstraction supplémentaire — c'est de la logique d'infrastructure/Identity, pas du domaine pur.
+
+#### 6. Web — UI
+
+- **`Admin.razor`** — Ajouter un 3e onglet « Utilisateurs » dans les tabs existants :
+  - Tableau listant tous les utilisateurs : nom, email, rôles (badges), actions.
+  - Bouton « + Nouvel utilisateur » ouvrant une modale de création.
+  - Actions par ligne : Modifier (modale), Régénérer mot de passe (confirmation + affichage), Supprimer (confirmation).
+  - Modale création/modification : champs DisplayName, Email, checkboxes Propriétaire/Administrateur.
+  - Modale mot de passe généré : affiche le mot de passe en clair une seule fois avec bouton copier.
+  - Le bouton supprimer est désactivé si l'utilisateur a des réservations (tooltip explicatif).
+
+#### 7. Tests
+
+- **Domain.Tests** : `Owner.Update()` renomme correctement.
+- **Application.Tests** :
+  - `CreateUserCommandHandler` : crée user + owner si rôle Owner, refuse email dupliqué.
+  - `DeleteUserCommandHandler` : refuse si réservations existantes, refuse si dernier admin.
+  - `ResetPasswordCommandHandler` : retourne un mot de passe valide.
+  - `GetUsersQueryHandler` : retourne la liste avec rôles et flag `HasReservations`.
+
+### Points d'attention
+
+- **Pas de migration EF Core nécessaire** : `Owner` et `AspNetUsers` existent déjà. Les nouvelles opérations sont des CRUD sur les tables existantes.
+- **`UserManager`** gère déjà la complexité Identity (hashing, validation mot de passe, rôles). On s'appuie dessus sans réinventer.
+- **Accès** : toutes les opérations marquées `IRequireAdmin` → sécurisées via `AdminAuthorizationBehavior` existant.
+
+**Livrable** : Page de gestion des utilisateurs dans l'admin, CRUD complet propriétaires/admins, régénération de mot de passe aléatoire.
+
+---
+
 ## Résumé des phases
 
 | Phase | Contenu | Estimation |
@@ -473,6 +597,125 @@ Le développement est découpé en **7 phases** progressives, chaque phase livra
 | 7 | Finalisation & Déploiement | Production |
 | **8** | **Multi-typologies personnes** | **Tarification précise** |
 | **9** | **Durcissement (sécurité, intégrité, archi, UI)** | **✅ Livrée** |
+| **10** | **Bugfix — Règle « studio non louable seul » (H1)** | **À faire** |
+| **11** | **Gestion des utilisateurs (Admin)** | **À faire** |
+| **12** | **Types client flexibles Mobil-home / Tente** | **✅ Livrée** |
+| **13** | **Gestion admin des studios + champ Indisponible** | **À faire** |
+
+## Phase 12 : Types client flexibles Mobil-home / Tente
+
+**Objectif** : Permettre de choisir le type de client pour les studios Mobil-home et Tente, au lieu de forcer un type exclusif.
+
+### Problème
+
+Actuellement, sélectionner un studio Mobil-home force le type `MobileHome` et sélectionner un emplacement Tente force le type `Tent`. Le dropdown est désactivé, une seule ligne de personnes est autorisée. Cela empêche de facturer au tarif propriétaire ou invité quand c'est pertinent.
+
+### Nouvelle règle
+
+| Studio | Types autorisés |
+|--------|----------------|
+| Mobil-home | MobileHome, Owner, GuestWithPresence |
+| Emplacement tente | Tent, Owner, GuestWithPresence |
+| Autres studios | Owner, GuestWithPresence, Acquaintance |
+
+- Les studios Mobil-home et Tente permettent désormais **plusieurs lignes de personnes** et le **mix de types**.
+- Le dropdown est actif (plus désactivé).
+- Les types `Acquaintance` (pour Mobil-home/Tente) et `MobileHome`/`Tent` (pour les studios classiques) restent interdits.
+
+### Tâches
+
+1. **`ReservationFormModal.razor`** — Refondre `UpdateExclusiveType()` :
+   - Remplacer le flag booléen `_isExclusiveType` par une liste `_allowedClientTypes` calculée selon le studio.
+   - Supprimer le forçage du type et la limitation à 1 ligne.
+   - Filtrer le dropdown des types selon `_allowedClientTypes`.
+   - Adapter `AddLine()` pour choisir le prochain type parmi les types autorisés.
+   - Réactiver le bouton "+" et le bouton "×" pour Mobil-home/Tente.
+
+### Impact
+
+| Couche | Impact |
+|--------|--------|
+| Domain | Aucun |
+| Application (validators) | Aucun (validation `.IsInEnum()` suffisante) |
+| Infrastructure | Aucun |
+| Tarification | Aucun (grille de prix existante couvre tous les types) |
+| UI | Seul `ReservationFormModal.razor` est modifié |
+
+**Livrable** : Types de client flexibles pour Mobil-home et Tente, multi-lignes autorisées.
+
+---
+
+## Phase 13 : Gestion admin des studios + champ Indisponible
+
+**Objectif** : Rendre le catalogue de studios modifiable par un administrateur (nom, capacité, cuisine, louable seul) et ajouter un champ **Indisponible** (`Unavailable`) permettant de verrouiller un logement pour empêcher toute nouvelle réservation.
+
+### Analyse d'impact
+
+| Couche | Fichiers impactés | Nature de l'impact |
+|--------|-------------------|--------------------|
+| **Domain** | `Studio.cs`, `IStudioRepository.cs` | Propriété `Unavailable`, méthode `Update()`, `UpdateAsync` au repository |
+| **Application** | `StudioDto.cs`, nouveaux `Commands/UpdateStudio/*` | Champ `Unavailable` au DTO, commande CQRS `UpdateStudio` |
+| **Application** | `CreateReservationCommandHandler`, `UpdateReservationCommandHandler` | Guard si `studio.Unavailable` |
+| **Application** | 5 query handlers (studios, planning, detail, occupation) | Propagation `Unavailable` dans le DTO |
+| **Infrastructure** | `StudioConfiguration.cs`, `StudioRepository.cs`, `DbInitializer.cs` | Config EF Core, `UpdateAsync`, seed, migration |
+| **Web** | `Admin.razor` | Onglet Studios éditable (modales modification) |
+| **Web** | `PlanningGrid.razor`, `ReservationFormModal.razor` | Badge « Indisponible », filtrage dans le formulaire |
+| **Tests** | 6+ fichiers | Adaptation `Studio.Create()`, nouveaux tests Unavailable |
+
+### Tâches
+
+#### 1. Domain
+
+- **`Studio.cs`** — Ajouter propriété `bool Unavailable { get; private set; }` (défaut `false`). Ajouter méthode `Update(string name, int capacity, bool hasKitchen, bool rentableAlone, bool unavailable)`. Mettre à jour `Create()` avec le paramètre `unavailable`.
+- **`IStudioRepository.cs`** — Ajouter `Task UpdateAsync(Studio studio, CancellationToken ct = default)`.
+
+#### 2. Application — Commande `UpdateStudio`
+
+- **`UpdateStudioCommand`** (`IRequireAdmin`) : `Guid StudioId`, `string Name`, `int Capacity`, `bool HasKitchen`, `bool RentableAlone`, `bool Unavailable`.
+- **`UpdateStudioCommandHandler`** : charge le studio, appelle `studio.Update(...)`, persiste via `UpdateAsync`.
+- **`UpdateStudioCommandValidator`** : Name requis/max 100, Capacity ≥ 1.
+
+#### 3. Application — Guard réservation
+
+- **`CreateReservationCommandHandler`** : après le fetch du studio, vérifier `studio.Unavailable` → throw `InvalidOperationException`.
+- **`UpdateReservationCommandHandler`** : idem si le studio change.
+
+#### 4. Application — Propagation DTO
+
+- **`StudioDto`** : ajouter `bool Unavailable`.
+- Mettre à jour le mapping dans : `GetStudiosQueryHandler`, `GetMonthlyPlanningQueryHandler`, `GetReservationDetailQueryHandler`.
+- **`GetDailyOccupationQueryHandler`** et **`GetRangeOccupationQueryHandler`** : exclure les studios indisponibles des KPIs (capacité totale et taux d'occupation).
+
+#### 5. Infrastructure
+
+- **`StudioConfiguration.cs`** : `builder.Property(s => s.Unavailable).IsRequired().HasDefaultValue(false)`.
+- **`StudioRepository.cs`** : implémenter `UpdateAsync`.
+- **`DbInitializer.cs`** : mettre à jour les appels `Studio.Create(...)` avec `unavailable: false`.
+- **Migration EF Core** : nouvelle colonne `Unavailable` avec défaut `false`.
+
+#### 6. Web — Admin
+
+- **`Admin.razor`** onglet Studios : remplacer le tableau lecture seule par un tableau avec bouton « Modifier » par ligne ouvrant une modale. Champs : Nom (input text), Capacité (input number), Cuisine (checkbox), Louable seul (checkbox), Indisponible (checkbox). Retirer le badge « Catalogue figé ».
+
+#### 7. Web — Planning
+
+- **`PlanningGrid.razor`** : afficher un badge « Indisponible » sur les studios marqués `Unavailable`.
+- **`ReservationFormModal.razor`** : filtrer les studios indisponibles dans le dropdown de sélection.
+
+#### 8. Tests
+
+- Adapter tous les appels `Studio.Create()` existants (6+ fichiers) pour le nouveau paramètre.
+- Ajouter tests : refus de réservation sur studio indisponible, commande `UpdateStudio`.
+
+### Points d'attention
+
+- Les réservations **existantes** sur un studio marqué indisponible restent visibles dans le planning (elles ne sont pas supprimées). Seule la **création** de nouvelles réservations est bloquée.
+- Les KPIs d'occupation excluent les studios indisponibles pour refléter la réalité opérationnelle.
+- Le `DisplayOrder` n'est pas modifiable via l'admin (ordre figé).
+
+**Livrable** : Studios modifiables par l'admin, champ Indisponible verrouillant les réservations, indicateurs visuels dans le planning.
+
+---
 
 ## Dépendances NuGet prévues
 

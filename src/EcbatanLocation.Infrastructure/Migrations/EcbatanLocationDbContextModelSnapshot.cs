@@ -15,7 +15,7 @@ namespace EcbatanLocation.Infrastructure.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
 
             modelBuilder.Entity("EcbatanLocation.Domain.Entities.Owner", b =>
                 {
@@ -156,6 +156,11 @@ namespace EcbatanLocation.Infrastructure.Migrations
 
                     b.Property<bool>("RentableAlone")
                         .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Unavailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
 
                     b.HasKey("Id");
 

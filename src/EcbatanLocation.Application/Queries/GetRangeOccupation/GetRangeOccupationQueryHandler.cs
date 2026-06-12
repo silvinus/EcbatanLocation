@@ -11,7 +11,8 @@ public class GetRangeOccupationQueryHandler(
 {
     public async Task<RangeOccupationDto> Handle(GetRangeOccupationQuery request, CancellationToken cancellationToken)
     {
-        var studios = await studioRepository.GetAllAsync(cancellationToken);
+        var allStudios = await studioRepository.GetAllAsync(cancellationToken);
+        var studios = allStudios.Where(s => !s.Unavailable).ToList();
         var totalCapacity = studios.Sum(s => s.Capacity);
         var totalStudios = studios.Count;
 
