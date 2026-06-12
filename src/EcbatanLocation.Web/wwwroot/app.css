@@ -416,6 +416,17 @@ header {
 .price-input:focus { border-color: var(--brand); }
 .price-unit { color: var(--muted); font-size: 13px; margin-left: 6px; }
 
+/* Checkbox labels */
+.checkbox-label {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--txt); cursor: pointer;
+    padding: 6px 12px; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--hover-subtle);
+    transition: background .15s;
+}
+.checkbox-label:hover { background: var(--hover); }
+.checkbox-label input[type="checkbox"] { accent-color: var(--brand); }
+
 /* Week view */
 .week-nav {
     display: flex; align-items: center; gap: 12px;

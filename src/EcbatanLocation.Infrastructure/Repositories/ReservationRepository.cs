@@ -117,4 +117,9 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
             .Where(r => r.Dates.StartDate <= date && r.Dates.EndDate > date)
             .ToListAsync(ct);
     }
+
+    public async Task<bool> ExistsByOwnerAsync(Guid ownerId, CancellationToken ct = default)
+    {
+        return await context.Reservations.AnyAsync(r => r.OwnerId == ownerId, ct);
+    }
 }

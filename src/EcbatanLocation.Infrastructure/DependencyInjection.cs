@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using EcbatanLocation.Application.Services;
 using EcbatanLocation.Domain.Repositories;
 using EcbatanLocation.Infrastructure.Identity;
 using EcbatanLocation.Infrastructure.Persistence;
 using EcbatanLocation.Infrastructure.Repositories;
+using EcbatanLocation.Infrastructure.Services;
 
 namespace EcbatanLocation.Infrastructure;
 
@@ -36,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IOwnerRepository, OwnerRepository>();
         services.AddScoped<IPricingGridRepository, PricingGridRepository>();
+        services.AddScoped<IUserService, UserService>();
 
         return services;
     }

@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "Admin")]
 @inject IMediator Mediator
 @inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthStateProvider
 @rendermode InteractiveServer
 
 <PageTitle>Administration - Ecbatan Location</PageTitle>
@@ -14,6 +15,9 @@
         </button>
         <button class="chip @(_activeTab == "studios" ? "active" : "muted")" @onclick='() => _activeTab = "studios"'>
             Studios
+        </button>
+        <button class="chip @(_activeTab == "users" ? "active" : "muted")" @onclick='() => SwitchToUsersTab()'>
+            Utilisateurs
         </button>
     </div>
 
@@ -138,7 +142,192 @@
             </div>
         </div>
     }
+
+    @if (_activeTab == "users")
+    {
+        <div class="card">
+            <div class="hd">
+                <h2>Utilisateurs</h2>
+                <button class="btn primary" @onclick="OpenCreateUserModal">+ Nouvel utilisateur</button>
+            </div>
+            <div class="bd">
+                @if (_usersSuccess is not null)
+                {
+                    <div class="alert-success">@_usersSuccess</div>
+                }
+                @if (_usersError is not null)
+                {
+                    <div class="alert-error">@_usersError</div>
+                }
+
+                @if (_loadingUsers)
+                {
+                    <div class="loading-indicator">Chargement des utilisateurs...</div>
+                }
+                else if (_users is not null)
+                {
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Email</th>
+                                <th>Rôles</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var u in _users)
+                            {
+                                <tr>
+                                    <td><b>@u.DisplayName</b></td>
+                                    <td>@u.Email</td>
+                                    <td>
+                                        @foreach (var role in u.Roles)
+                                        {
+                                            <span class="badge @(role == "Admin" ? "st-accepted" : "st-confirmed")">@GetRoleLabel(role)</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="detail-actions">
+                                            <button class="btn" @onclick="() => OpenEditUserModal(u)">Modifier</button>
+                                            <button class="btn" @onclick="() => OpenResetPasswordConfirm(u)">Mot de passe</button>
+                                            @if (u.UserId != _currentUserId)
+                                            {
+                                                <button class="btn danger"
+                                                        disabled="@u.HasReservations"
+                                                        title="@(u.HasReservations ? "Cet utilisateur a des réservations — supprimez-les d'abord" : "Supprimer cet utilisateur")"
+                                                        @onclick="() => OpenDeleteConfirm(u)">
+                                                    Supprimer
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    }
 </div>
+
+@* ── Create / Edit user modal ── *@
+@if (_showUserModal)
+{
+    <div class="modal-overlay" @onclick="CloseUserModal" @onclick:stopPropagation="false">
+        <div class="modal-content modal-wide" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <div class="modal-hd">
+                <h3>@(_editingUserId is null ? "Nouvel utilisateur" : "Modifier l'utilisateur")</h3>
+                <button class="x" @onclick="CloseUserModal">&times;</button>
+            </div>
+            <div class="modal-bd">
+                @if (_userModalError is not null)
+                {
+                    <div class="alert-error">@_userModalError</div>
+                }
+                <div class="grid">
+                    <div class="field">
+                        <label for="user-name">Nom</label>
+                        <input id="user-name" type="text" @bind="_userFormName" />
+                    </div>
+                    <div class="field">
+                        <label for="user-email">Email</label>
+                        <input id="user-email" type="email" @bind="_userFormEmail" />
+                    </div>
+                    <div class="field">
+                        <label>Rôles</label>
+                        <div class="detail-actions">
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="_userFormIsOwner" /> Propriétaire
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="_userFormIsAdmin" /> Administrateur
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn" @onclick="CloseUserModal">Annuler</button>
+                    <button class="btn primary" @onclick="SaveUser" disabled="@_savingUser">
+                        @(_savingUser ? "Enregistrement..." : "Enregistrer")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Generated password modal ── *@
+@if (_showPasswordModal)
+{
+    <div class="modal-overlay" @onclick="ClosePasswordModal" @onclick:stopPropagation="false">
+        <div class="modal-content modal-wide" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <div class="modal-hd">
+                <h3>Mot de passe généré</h3>
+                <button class="x" @onclick="ClosePasswordModal">&times;</button>
+            </div>
+            <div class="modal-bd">
+                <div class="alert-success">
+                    Le mot de passe a été généré. Communiquez-le à l'utilisateur. Il ne sera plus affiché après fermeture.
+                </div>
+                <div class="estimation">
+                    <span class="label">Mot de passe</span>
+                    <span class="amount" style="font-family:var(--mono);letter-spacing:1px">@_generatedPassword</span>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn primary" @onclick="ClosePasswordModal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Delete confirmation modal ── *@
+@if (_showDeleteConfirm)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteConfirm" @onclick:stopPropagation="false">
+        <div class="modal-content modal-wide" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <div class="modal-hd">
+                <h3>Confirmer la suppression</h3>
+                <button class="x" @onclick="CloseDeleteConfirm">&times;</button>
+            </div>
+            <div class="modal-bd">
+                <p>Voulez-vous vraiment supprimer le compte de <b>@_deleteTargetName</b> (@_deleteTargetEmail) ?</p>
+                <p class="hint">Cette action est irréversible.</p>
+                <div class="modal-actions">
+                    <button class="btn" @onclick="CloseDeleteConfirm">Annuler</button>
+                    <button class="btn danger" @onclick="ConfirmDeleteUser" disabled="@_deletingUser">
+                        @(_deletingUser ? "Suppression..." : "Supprimer")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Reset password confirmation modal ── *@
+@if (_showResetConfirm)
+{
+    <div class="modal-overlay" @onclick="CloseResetConfirm" @onclick:stopPropagation="false">
+        <div class="modal-content modal-wide" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <div class="modal-hd">
+                <h3>Régénérer le mot de passe</h3>
+                <button class="x" @onclick="CloseResetConfirm">&times;</button>
+            </div>
+            <div class="modal-bd">
+                <p>Régénérer un nouveau mot de passe pour <b>@_resetTargetName</b> ?</p>
+                <p class="hint">L'ancien mot de passe sera invalidé.</p>
+                <div class="modal-actions">
+                    <button class="btn" @onclick="CloseResetConfirm">Annuler</button>
+                    <button class="btn primary" @onclick="ConfirmResetPassword" disabled="@_resettingPassword">
+                        @(_resettingPassword ? "Génération..." : "Régénérer")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private string _activeTab = "pricing";
@@ -154,8 +343,45 @@
     private IReadOnlyList<StudioDto>? _studios;
     private bool _loadingStudios = true;
 
+    // ── Users tab state ──
+    private IReadOnlyList<UserDto>? _users;
+    private bool _loadingUsers;
+    private string? _usersSuccess;
+    private string? _usersError;
+    private string? _currentUserId;
+
+    // User form modal
+    private bool _showUserModal;
+    private string? _editingUserId;
+    private string _userFormName = "";
+    private string _userFormEmail = "";
+    private bool _userFormIsOwner;
+    private bool _userFormIsAdmin;
+    private bool _savingUser;
+    private string? _userModalError;
+
+    // Password modal
+    private bool _showPasswordModal;
+    private string? _generatedPassword;
+
+    // Delete confirmation
+    private bool _showDeleteConfirm;
+    private string? _deleteTargetUserId;
+    private string? _deleteTargetName;
+    private string? _deleteTargetEmail;
+    private bool _deletingUser;
+
+    // Reset password confirmation
+    private bool _showResetConfirm;
+    private string? _resetTargetUserId;
+    private string? _resetTargetName;
+    private bool _resettingPassword;
+
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
         await Task.WhenAll(LoadPricingGrid(), LoadStudios());
     }
 
@@ -291,5 +517,192 @@
     {
         public ClientType ClientType { get; } = clientType;
         public decimal Price { get; set; } = price;
+    }
+
+    // ── Users tab ──
+
+    private static string GetRoleLabel(string role) => role switch
+    {
+        "Owner" => "Propriétaire",
+        "Admin" => "Administrateur",
+        _ => role
+    };
+
+    private async Task SwitchToUsersTab()
+    {
+        _activeTab = "users";
+        if (_users is null)
+            await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        _loadingUsers = true;
+        _usersSuccess = null;
+        _usersError = null;
+
+        try
+        {
+            _users = await Mediator.Send(
+                new EcbatanLocation.Application.Queries.GetUsers.GetUsersQuery());
+        }
+        catch (Exception ex)
+        {
+            _usersError = ex.Message;
+        }
+        finally
+        {
+            _loadingUsers = false;
+        }
+    }
+
+    private void OpenCreateUserModal()
+    {
+        _editingUserId = null;
+        _userFormName = "";
+        _userFormEmail = "";
+        _userFormIsOwner = true;
+        _userFormIsAdmin = false;
+        _userModalError = null;
+        _showUserModal = true;
+    }
+
+    private void OpenEditUserModal(UserDto user)
+    {
+        _editingUserId = user.UserId;
+        _userFormName = user.DisplayName;
+        _userFormEmail = user.Email;
+        _userFormIsOwner = user.Roles.Contains("Owner");
+        _userFormIsAdmin = user.Roles.Contains("Admin");
+        _userModalError = null;
+        _showUserModal = true;
+    }
+
+    private void CloseUserModal() => _showUserModal = false;
+
+    private async Task SaveUser()
+    {
+        _savingUser = true;
+        _userModalError = null;
+
+        try
+        {
+            var roles = new List<string>();
+            if (_userFormIsOwner) roles.Add("Owner");
+            if (_userFormIsAdmin) roles.Add("Admin");
+
+            if (roles.Count == 0)
+            {
+                _userModalError = "Au moins un rôle est requis.";
+                return;
+            }
+
+            if (_editingUserId is null)
+            {
+                var result = await Mediator.Send(
+                    new EcbatanLocation.Application.Commands.CreateUser.CreateUserCommand(
+                        _userFormName, _userFormEmail, roles));
+
+                _showUserModal = false;
+                _generatedPassword = result.GeneratedPassword;
+                _showPasswordModal = true;
+                _usersSuccess = $"Utilisateur « {_userFormName} » créé.";
+            }
+            else
+            {
+                await Mediator.Send(
+                    new EcbatanLocation.Application.Commands.UpdateUser.UpdateUserCommand(
+                        _editingUserId, _userFormName, _userFormEmail, roles));
+
+                _showUserModal = false;
+                _usersSuccess = $"Utilisateur « {_userFormName} » modifié.";
+            }
+
+            await LoadUsers();
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _userModalError = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            _userModalError = ex.Message;
+        }
+        finally
+        {
+            _savingUser = false;
+        }
+    }
+
+    private void ClosePasswordModal()
+    {
+        _showPasswordModal = false;
+        _generatedPassword = null;
+    }
+
+    private void OpenDeleteConfirm(UserDto user)
+    {
+        _deleteTargetUserId = user.UserId;
+        _deleteTargetName = user.DisplayName;
+        _deleteTargetEmail = user.Email;
+        _showDeleteConfirm = true;
+    }
+
+    private void CloseDeleteConfirm() => _showDeleteConfirm = false;
+
+    private async Task ConfirmDeleteUser()
+    {
+        _deletingUser = true;
+        try
+        {
+            await Mediator.Send(
+                new EcbatanLocation.Application.Commands.DeleteUser.DeleteUserCommand(_deleteTargetUserId!));
+
+            _showDeleteConfirm = false;
+            _usersSuccess = $"Utilisateur « {_deleteTargetName} » supprimé.";
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            _showDeleteConfirm = false;
+            _usersError = ex.Message;
+        }
+        finally
+        {
+            _deletingUser = false;
+        }
+    }
+
+    private void OpenResetPasswordConfirm(UserDto user)
+    {
+        _resetTargetUserId = user.UserId;
+        _resetTargetName = user.DisplayName;
+        _showResetConfirm = true;
+    }
+
+    private void CloseResetConfirm() => _showResetConfirm = false;
+
+    private async Task ConfirmResetPassword()
+    {
+        _resettingPassword = true;
+        try
+        {
+            var newPassword = await Mediator.Send(
+                new EcbatanLocation.Application.Commands.ResetPassword.ResetPasswordCommand(_resetTargetUserId!));
+
+            _showResetConfirm = false;
+            _generatedPassword = newPassword;
+            _showPasswordModal = true;
+            _usersSuccess = $"Mot de passe de « {_resetTargetName} » régénéré.";
+        }
+        catch (Exception ex)
+        {
+            _showResetConfirm = false;
+            _usersError = ex.Message;
+        }
+        finally
+        {
+            _resettingPassword = false;
+        }
     }
 }
