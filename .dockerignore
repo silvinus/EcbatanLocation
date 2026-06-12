@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/out/
+**/.vs/
+**/.vscode/
+**/node_modules/
+*.md
+*.pdf
+.git/
+.gitignore
+tests/
