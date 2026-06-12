@@ -97,9 +97,17 @@
         <div class="card">
             <div class="hd">
                 <h2>Studios</h2>
-                <span class="pill">Catalogue figé</span>
             </div>
             <div class="bd">
+                @if (_studiosSuccess is not null)
+                {
+                    <div class="alert-success">@_studiosSuccess</div>
+                }
+                @if (_studiosError is not null)
+                {
+                    <div class="alert-error">@_studiosError</div>
+                }
+
                 @if (_loadingStudios)
                 {
                     <div class="loading-indicator">Chargement des studios...</div>
@@ -113,12 +121,14 @@
                                 <th>Capacité</th>
                                 <th>Cuisine</th>
                                 <th>Louable seul</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var s in _studios)
                             {
-                                <tr>
+                                <tr class="@(s.Unavailable ? "row-unavailable" : "")">
                                     <td><b>@s.Name</b></td>
                                     <td>@s.Capacity pers.</td>
                                     <td>
@@ -131,13 +141,23 @@
                                             @(s.RentableAlone ? "Oui" : "Non")
                                         </span>
                                     </td>
+                                    <td>
+                                        @if (s.Unavailable)
+                                        {
+                                            <span class="badge st-pending">Indisponible</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge st-confirmed">Disponible</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button class="btn" @onclick="() => OpenEditStudioModal(s)">Modifier</button>
+                                    </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
-                    <div class="hint mt-md">
-                        Le catalogue de studios est figé dans la configuration initiale. Contactez l'administrateur système pour toute modification.
-                    </div>
                 }
             </div>
         </div>
@@ -211,6 +231,60 @@
         </div>
     }
 </div>
+
+@* ── Edit studio modal ── *@
+@if (_showStudioModal)
+{
+    <div class="modal-overlay" @onclick="CloseStudioModal" @onclick:stopPropagation="false">
+        <div class="modal-content modal-wide" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <div class="modal-hd">
+                <h3>Modifier le studio</h3>
+                <button class="x" @onclick="CloseStudioModal">&times;</button>
+            </div>
+            <div class="modal-bd">
+                @if (_studioModalError is not null)
+                {
+                    <div class="alert-error">@_studioModalError</div>
+                }
+                <div class="grid">
+                    <div class="field">
+                        <label for="studio-name">Nom</label>
+                        <input id="studio-name" type="text" @bind="_studioFormName" />
+                    </div>
+                    <div class="field">
+                        <label for="studio-capacity">Capacité (personnes)</label>
+                        <input id="studio-capacity" type="number" min="1" @bind="_studioFormCapacity" />
+                    </div>
+                    <div class="field">
+                        <label>Options</label>
+                        <div class="detail-actions">
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="_studioFormHasKitchen" /> Cuisine
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="_studioFormRentableAlone" /> Louable seul
+                            </label>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Disponibilité</label>
+                        <div class="detail-actions">
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="_studioFormUnavailable" /> Indisponible (bloque les réservations)
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn" @onclick="CloseStudioModal">Annuler</button>
+                    <button class="btn primary" @onclick="SaveStudio" disabled="@_savingStudio">
+                        @(_savingStudio ? "Enregistrement..." : "Enregistrer")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @* ── Create / Edit user modal ── *@
 @if (_showUserModal)
@@ -342,6 +416,19 @@
 
     private IReadOnlyList<StudioDto>? _studios;
     private bool _loadingStudios = true;
+    private string? _studiosSuccess;
+    private string? _studiosError;
+
+    // Studio edit modal
+    private bool _showStudioModal;
+    private Guid _editingStudioId;
+    private string _studioFormName = "";
+    private int _studioFormCapacity = 1;
+    private bool _studioFormHasKitchen;
+    private bool _studioFormRentableAlone;
+    private bool _studioFormUnavailable;
+    private bool _savingStudio;
+    private string? _studioModalError;
 
     // ── Users tab state ──
     private IReadOnlyList<UserDto>? _users;
@@ -407,8 +494,54 @@
     private async Task LoadStudios()
     {
         _loadingStudios = true;
+        _studiosSuccess = null;
+        _studiosError = null;
         _studios = await Mediator.Send(new EcbatanLocation.Application.Queries.GetStudios.GetStudiosQuery());
         _loadingStudios = false;
+    }
+
+    private void OpenEditStudioModal(StudioDto studio)
+    {
+        _editingStudioId = studio.Id;
+        _studioFormName = studio.Name;
+        _studioFormCapacity = studio.Capacity;
+        _studioFormHasKitchen = studio.HasKitchen;
+        _studioFormRentableAlone = studio.RentableAlone;
+        _studioFormUnavailable = studio.Unavailable;
+        _studioModalError = null;
+        _showStudioModal = true;
+    }
+
+    private void CloseStudioModal() => _showStudioModal = false;
+
+    private async Task SaveStudio()
+    {
+        _savingStudio = true;
+        _studioModalError = null;
+
+        try
+        {
+            await Mediator.Send(
+                new EcbatanLocation.Application.Commands.UpdateStudio.UpdateStudioCommand(
+                    _editingStudioId, _studioFormName, _studioFormCapacity,
+                    _studioFormHasKitchen, _studioFormRentableAlone, _studioFormUnavailable));
+
+            _showStudioModal = false;
+            _studiosSuccess = $"Studio « {_studioFormName} » modifié.";
+            await LoadStudios();
+        }
+        catch (FluentValidation.ValidationException ex)
+        {
+            _studioModalError = string.Join(" ", ex.Errors.Select(e => e.ErrorMessage));
+        }
+        catch (Exception ex)
+        {
+            _studioModalError = ex.Message;
+        }
+        finally
+        {
+            _savingStudio = false;
+        }
     }
 
     private async Task PreviousYear()

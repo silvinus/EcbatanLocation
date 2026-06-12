@@ -25,7 +25,7 @@
                     <label>Studio</label>
                     <select value="@_studioId" @onchange="OnStudioChanged">
                         <option value="">-- Choisir un studio --</option>
-                        @foreach (var s in Studios)
+                        @foreach (var s in Studios.Where(s => !s.Unavailable))
                         {
                             <option value="@s.Id">@s.Name (@s.Capacity pers.@(s.HasKitchen ? ", cuisine" : "")@(!s.RentableAlone ? ", non louable seul" : ""))</option>
                         }

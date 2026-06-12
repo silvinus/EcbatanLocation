@@ -72,6 +72,24 @@ public class CreateReservationCommandHandlerTests(IntegrationTestFixture fixture
     }
 
     [Fact]
+    public async Task Handle_UnavailableStudio_Throws()
+    {
+        var villa = await GetStudioAsync("Villa");
+        var owner = await GetOwnerAsync("Léa");
+
+        villa.Update(villa.Name, villa.Capacity, villa.HasKitchen, villa.RentableAlone, unavailable: true);
+        var studioRepo = Services.GetRequiredService<IStudioRepository>();
+        await studioRepo.UpdateAsync(villa);
+
+        var cmd = new CreateReservationCommand(villa.Id, owner.Id,
+            new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8),
+            "Dupont", [new PersonLineDto(ClientType.Owner, 1, 0)]);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Mediator.Send(cmd));
+        Assert.Contains("unavailable", ex.Message);
+    }
+
+    [Fact]
     public async Task Handle_NonRentableAloneStudio_WithOverlappingIndependentStudio_Succeeds()
     {
         var villa = await GetStudioAsync("Villa");

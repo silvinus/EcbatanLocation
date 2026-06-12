@@ -37,7 +37,7 @@ public class GetMonthlyPlanningQueryHandler(
         var studioPlannings = filteredStudios
             .OrderBy(s => s.DisplayOrder)
             .Select(s => new StudioPlanningDto(
-                new StudioDto(s.Id, s.Name, s.Capacity, s.HasKitchen, s.RentableAlone, s.DisplayOrder),
+                new StudioDto(s.Id, s.Name, s.Capacity, s.HasKitchen, s.RentableAlone, s.Unavailable, s.DisplayOrder),
                 reservationsByStudio.TryGetValue(s.Id, out var studioReservations)
                     ? studioReservations.Select(r => new ReservationPlanningDto(
                         r.Id,

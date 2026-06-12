@@ -137,6 +137,7 @@ header {
 }
 .studio-name { font-weight: 800; color: var(--txt); }
 .studio-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.studio-unavailable { opacity: .5; }
 
 .cell { display: flex; flex-direction: column; gap: 6px; min-height: 40px; }
 
@@ -407,6 +408,7 @@ header {
 }
 .admin-table tr:last-child td { border-bottom: none; }
 .admin-table tr:hover td { background: var(--hover-subtle); }
+.admin-table tr.row-unavailable td { opacity: .55; }
 
 .price-input {
     background: var(--input-bg); border: 1px solid var(--line); color: var(--txt);

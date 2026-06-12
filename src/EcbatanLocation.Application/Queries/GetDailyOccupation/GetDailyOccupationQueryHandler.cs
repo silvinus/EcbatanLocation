@@ -13,7 +13,8 @@ public class GetDailyOccupationQueryHandler(
 {
     public async Task<DailyOccupationDto> Handle(GetDailyOccupationQuery request, CancellationToken cancellationToken)
     {
-        var studios = await studioRepository.GetAllAsync(cancellationToken);
+        var allStudios = await studioRepository.GetAllAsync(cancellationToken);
+        var studios = allStudios.Where(s => !s.Unavailable).ToList();
         var reservations = await reservationRepository.GetByDateAsync(request.Date, cancellationToken);
 
         var occupiedStudioIds = reservations
@@ -30,7 +31,7 @@ public class GetDailyOccupationQueryHandler(
             totalCapacity,
             occupiedPlaces,
             totalCapacity - occupiedPlaces,
-            occupiedStudioIds.Count,
+            occupiedStudioIds.Count(id => studios.Any(s => s.Id == id)),
             studios.Count);
     }
 }

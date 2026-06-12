@@ -31,8 +31,14 @@
             var spans = BuildSpans(studioPlan.Reservations, monthStart, monthEnd, daysInMonth);
 
             <tr>
-                <td class="studio-col">
-                    <div class="studio-name">@studioPlan.Studio.Name</div>
+                <td class="studio-col @(studioPlan.Studio.Unavailable ? "studio-unavailable" : "")">
+                    <div class="studio-name">
+                        @studioPlan.Studio.Name
+                        @if (studioPlan.Studio.Unavailable)
+                        {
+                            <span class="badge st-pending" style="margin-left:.4rem;font-size:.7rem">Indisponible</span>
+                        }
+                    </div>
                     <div class="studio-meta">
                         @if (studioPlan.Studio.HasKitchen) { <span>Cuisine</span> }
                         else { <span>Sans cuisine</span> }

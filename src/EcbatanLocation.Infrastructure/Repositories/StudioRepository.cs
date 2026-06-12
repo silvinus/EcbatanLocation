@@ -12,4 +12,10 @@ public class StudioRepository(EcbatanLocationDbContext context) : IStudioReposit
 
     public async Task<IReadOnlyList<Studio>> GetAllAsync(CancellationToken ct = default)
         => await context.Studios.OrderBy(s => s.DisplayOrder).ToListAsync(ct);
+
+    public async Task UpdateAsync(Studio studio, CancellationToken ct = default)
+    {
+        context.Studios.Update(studio);
+        await context.SaveChangesAsync(ct);
+    }
 }
