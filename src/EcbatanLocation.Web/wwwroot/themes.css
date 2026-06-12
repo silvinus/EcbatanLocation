@@ -59,45 +59,45 @@
 
 /* --- FOREST --- */
 [data-theme="forest"][data-mode="dark"] {
-    --bg: #0c1a14;
-    --bg-grad-start: #071210;
-    --bg-grad-end: #0c1a14;
-    --panel: #102a1e;
-    --panel2: #0e2418;
-    --txt: #e6f5ee;
-    --muted: #9ec2ad;
+    --bg: #0b1611;
+    --bg-grad-start: #070f0c;
+    --bg-grad-end: #0b1611;
+    --panel: #10211a;
+    --panel2: #0d1c16;
+    --txt: #e0efe6;
+    --muted: #88aa96;
     --line: rgba(255,255,255,.10);
-    --brand: #34d399;
-    --ok: #22c55e;
-    --warn: #fbbf24;
-    --danger: #f87171;
-    --chip: #143d2a;
-    --shadow: 0 16px 40px rgba(0,0,0,.35);
-    --input-bg: rgba(0,0,0,.22);
-    --hover: rgba(255,255,255,.08);
-    --hover-subtle: rgba(255,255,255,.04);
-    --card-grad-start: rgba(255,255,255,.06);
-    --card-grad-end: rgba(255,255,255,.03);
-    --modal-grad-start: rgba(16,42,30,.98);
-    --modal-grad-end: rgba(12,26,20,.98);
-    --sticky-bg: rgba(12,26,20,.94);
-    --option-bg: #102a1e;
+    --brand: #5ab8a8;
+    --ok: #4ade80;
+    --warn: #e8b44a;
+    --danger: #e86060;
+    --chip: #142e24;
+    --shadow: 0 16px 40px rgba(0,0,0,.40);
+    --input-bg: rgba(0,0,0,.25);
+    --hover: rgba(255,255,255,.07);
+    --hover-subtle: rgba(255,255,255,.035);
+    --card-grad-start: rgba(255,255,255,.05);
+    --card-grad-end: rgba(255,255,255,.025);
+    --modal-grad-start: rgba(16,33,26,.98);
+    --modal-grad-end: rgba(11,22,17,.98);
+    --sticky-bg: rgba(11,22,17,.94);
+    --option-bg: #10211a;
 }
 
 [data-theme="forest"][data-mode="light"] {
-    --bg: #f0faf4;
-    --bg-grad-start: #e6f5ed;
-    --bg-grad-end: #f0faf4;
+    --bg: #f3f8f5;
+    --bg-grad-start: #eaf3ee;
+    --bg-grad-end: #f3f8f5;
     --panel: #ffffff;
-    --panel2: #f2faf6;
-    --txt: #1a2e22;
-    --muted: #4a7a5e;
+    --panel2: #f4f9f6;
+    --txt: #1a2b22;
+    --muted: #4e7560;
     --line: rgba(0,0,0,.10);
-    --brand: #16a34a;
-    --ok: #15803d;
-    --warn: #ca8a04;
-    --danger: #dc2626;
-    --chip: #d4f5e2;
+    --brand: #2a9d8f;
+    --ok: #22a352;
+    --warn: #b8860b;
+    --danger: #c93030;
+    --chip: #d6ede0;
     --shadow: 0 8px 24px rgba(0,0,0,.08);
     --input-bg: rgba(0,0,0,.04);
     --hover: rgba(0,0,0,.05);
@@ -105,8 +105,8 @@
     --card-grad-start: rgba(255,255,255,.9);
     --card-grad-end: rgba(255,255,255,.7);
     --modal-grad-start: rgba(255,255,255,.98);
-    --modal-grad-end: rgba(242,250,246,.98);
-    --sticky-bg: rgba(240,250,244,.96);
+    --modal-grad-end: rgba(244,249,246,.98);
+    --sticky-bg: rgba(243,248,245,.96);
     --option-bg: #ffffff;
 }
 
