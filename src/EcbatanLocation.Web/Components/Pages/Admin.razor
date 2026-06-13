@@ -97,6 +97,7 @@
         <div class="card">
             <div class="hd">
                 <h2>Studios</h2>
+                <button class="btn primary" @onclick="OpenCreateStudioModal">+ Nouveau studio</button>
             </div>
             <div class="bd">
                 @if (_studiosSuccess is not null)
@@ -152,7 +153,15 @@
                                         }
                                     </td>
                                     <td>
-                                        <button class="btn" @onclick="() => OpenEditStudioModal(s)">Modifier</button>
+                                        <div class="detail-actions">
+                                            <button class="btn" @onclick="() => OpenEditStudioModal(s)">Modifier</button>
+                                            <button class="btn danger"
+                                                    disabled="@s.HasReservations"
+                                                    title="@(s.HasReservations ? "Ce studio a des réservations — supprimez-les d'abord" : "Supprimer ce studio")"
+                                                    @onclick="() => OpenDeleteStudioConfirm(s)">
+                                                Supprimer
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -238,7 +247,7 @@
     <div class="modal-overlay" @onclick="CloseStudioModal" @onclick:stopPropagation="false">
         <div class="modal-content modal-wide" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
             <div class="modal-hd">
-                <h3>Modifier le studio</h3>
+                <h3>@(_editingStudioId is null ? "Nouveau studio" : "Modifier le studio")</h3>
                 <button class="x" @onclick="CloseStudioModal">&times;</button>
             </div>
             <div class="modal-bd">
@@ -279,6 +288,29 @@
                     <button class="btn" @onclick="CloseStudioModal">Annuler</button>
                     <button class="btn primary" @onclick="SaveStudio" disabled="@_savingStudio">
                         @(_savingStudio ? "Enregistrement..." : "Enregistrer")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Delete studio confirmation modal ── *@
+@if (_showDeleteStudioConfirm)
+{
+    <div class="modal-overlay" @onclick="CloseDeleteStudioConfirm" @onclick:stopPropagation="false">
+        <div class="modal-content modal-wide" role="dialog" aria-modal="true" @onclick:stopPropagation="true">
+            <div class="modal-hd">
+                <h3>Confirmer la suppression</h3>
+                <button class="x" @onclick="CloseDeleteStudioConfirm">&times;</button>
+            </div>
+            <div class="modal-bd">
+                <p>Voulez-vous vraiment supprimer le studio <b>@_deleteStudioName</b> ?</p>
+                <p class="hint">Cette action est irréversible.</p>
+                <div class="modal-actions">
+                    <button class="btn" @onclick="CloseDeleteStudioConfirm">Annuler</button>
+                    <button class="btn danger" @onclick="ConfirmDeleteStudio" disabled="@_deletingStudio">
+                        @(_deletingStudio ? "Suppression..." : "Supprimer")
                     </button>
                 </div>
             </div>
@@ -419,9 +451,9 @@
     private string? _studiosSuccess;
     private string? _studiosError;
 
-    // Studio edit modal
+    // Studio create/edit modal
     private bool _showStudioModal;
-    private Guid _editingStudioId;
+    private Guid? _editingStudioId;
     private string _studioFormName = "";
     private int _studioFormCapacity = 1;
     private bool _studioFormHasKitchen;
@@ -429,6 +461,12 @@
     private bool _studioFormUnavailable;
     private bool _savingStudio;
     private string? _studioModalError;
+
+    // Studio delete confirmation
+    private bool _showDeleteStudioConfirm;
+    private Guid? _deleteStudioId;
+    private string? _deleteStudioName;
+    private bool _deletingStudio;
 
     // ── Users tab state ──
     private IReadOnlyList<UserDto>? _users;
@@ -500,6 +538,18 @@
         _loadingStudios = false;
     }
 
+    private void OpenCreateStudioModal()
+    {
+        _editingStudioId = null;
+        _studioFormName = "";
+        _studioFormCapacity = 2;
+        _studioFormHasKitchen = false;
+        _studioFormRentableAlone = true;
+        _studioFormUnavailable = false;
+        _studioModalError = null;
+        _showStudioModal = true;
+    }
+
     private void OpenEditStudioModal(StudioDto studio)
     {
         _editingStudioId = studio.Id;
@@ -521,13 +571,27 @@
 
         try
         {
-            await Mediator.Send(
-                new EcbatanLocation.Application.Commands.UpdateStudio.UpdateStudioCommand(
-                    _editingStudioId, _studioFormName, _studioFormCapacity,
-                    _studioFormHasKitchen, _studioFormRentableAlone, _studioFormUnavailable));
+            if (_editingStudioId is null)
+            {
+                await Mediator.Send(
+                    new EcbatanLocation.Application.Commands.CreateStudio.CreateStudioCommand(
+                        _studioFormName, _studioFormCapacity,
+                        _studioFormHasKitchen, _studioFormRentableAlone, _studioFormUnavailable));
 
-            _showStudioModal = false;
-            _studiosSuccess = $"Studio « {_studioFormName} » modifié.";
+                _showStudioModal = false;
+                _studiosSuccess = $"Studio « {_studioFormName} » créé.";
+            }
+            else
+            {
+                await Mediator.Send(
+                    new EcbatanLocation.Application.Commands.UpdateStudio.UpdateStudioCommand(
+                        _editingStudioId.Value, _studioFormName, _studioFormCapacity,
+                        _studioFormHasKitchen, _studioFormRentableAlone, _studioFormUnavailable));
+
+                _showStudioModal = false;
+                _studiosSuccess = $"Studio « {_studioFormName} » modifié.";
+            }
+
             await LoadStudios();
         }
         catch (FluentValidation.ValidationException ex)
@@ -541,6 +605,38 @@
         finally
         {
             _savingStudio = false;
+        }
+    }
+
+    private void OpenDeleteStudioConfirm(StudioDto studio)
+    {
+        _deleteStudioId = studio.Id;
+        _deleteStudioName = studio.Name;
+        _showDeleteStudioConfirm = true;
+    }
+
+    private void CloseDeleteStudioConfirm() => _showDeleteStudioConfirm = false;
+
+    private async Task ConfirmDeleteStudio()
+    {
+        _deletingStudio = true;
+        try
+        {
+            await Mediator.Send(
+                new EcbatanLocation.Application.Commands.DeleteStudio.DeleteStudioCommand(_deleteStudioId!.Value));
+
+            _showDeleteStudioConfirm = false;
+            _studiosSuccess = $"Studio « {_deleteStudioName} » supprimé.";
+            await LoadStudios();
+        }
+        catch (Exception ex)
+        {
+            _showDeleteStudioConfirm = false;
+            _studiosError = ex.Message;
+        }
+        finally
+        {
+            _deletingStudio = false;
         }
     }
 

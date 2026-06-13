@@ -122,4 +122,9 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
     {
         return await context.Reservations.AnyAsync(r => r.OwnerId == ownerId, ct);
     }
+
+    public async Task<bool> ExistsByStudioAsync(Guid studioId, CancellationToken ct = default)
+    {
+        return await context.Reservations.AnyAsync(r => r.StudioId == studioId, ct);
+    }
 }

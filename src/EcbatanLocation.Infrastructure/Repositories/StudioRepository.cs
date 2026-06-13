@@ -18,4 +18,23 @@ public class StudioRepository(EcbatanLocationDbContext context) : IStudioReposit
         context.Studios.Update(studio);
         await context.SaveChangesAsync(ct);
     }
+
+    public async Task AddAsync(Studio studio, CancellationToken ct = default)
+    {
+        context.Studios.Add(studio);
+        await context.SaveChangesAsync(ct);
+    }
+
+    public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+    {
+        var studio = await context.Studios.FindAsync([id], ct)
+                     ?? throw new InvalidOperationException($"Studio '{id}' not found.");
+        context.Studios.Remove(studio);
+        await context.SaveChangesAsync(ct);
+    }
+
+    public async Task<int> GetMaxDisplayOrderAsync(CancellationToken ct = default)
+        => await context.Studios.AnyAsync(ct)
+            ? await context.Studios.MaxAsync(s => s.DisplayOrder, ct)
+            : 0;
 }
