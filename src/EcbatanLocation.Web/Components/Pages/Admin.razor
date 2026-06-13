@@ -19,6 +19,9 @@
         <button class="chip @(_activeTab == "users" ? "active" : "muted")" @onclick='() => SwitchToUsersTab()'>
             Utilisateurs
         </button>
+        <button class="chip @(_activeTab == "report" ? "active" : "muted")" @onclick='() => SwitchToReportTab()'>
+            Rapport
+        </button>
     </div>
 
     @if (_activeTab == "pricing")
@@ -235,6 +238,173 @@
                             }
                         </tbody>
                     </table>
+                }
+            </div>
+        </div>
+    }
+
+    @if (_activeTab == "report")
+    {
+        <div class="card">
+            <div class="hd">
+                <h2>Rapport des réservations</h2>
+            </div>
+            <div class="bd">
+                <div class="toolbar" style="gap:12px;flex-wrap:wrap;margin-bottom:12px">
+                    <div class="detail-actions">
+                        <button class="btn @(_reportMode == "month" ? "primary" : "")" @onclick='() => _reportMode = "month"'>Mois</button>
+                        <button class="btn @(_reportMode == "year" ? "primary" : "")" @onclick='() => _reportMode = "year"'>Année</button>
+                    </div>
+
+                    <div class="toolbar">
+                        <button class="btn-nav" @onclick="ReportPreviousPeriod" aria-label="Période précédente">&lt;</button>
+                        @if (_reportMode == "month")
+                        {
+                            <span class="pill mono">@GetReportMonthName(_reportMonth) @_reportYear</span>
+                        }
+                        else
+                        {
+                            <span class="pill mono">@_reportYear</span>
+                        }
+                        <button class="btn-nav" @onclick="ReportNextPeriod" aria-label="Période suivante">&gt;</button>
+                    </div>
+
+                    <button class="btn primary" @onclick="LoadReport" disabled="@_loadingReport">
+                        @(_loadingReport ? "Chargement..." : "Générer le rapport")
+                    </button>
+
+                    @if (_report is not null)
+                    {
+                        <a class="btn" href="@GetPdfUrl()" target="_blank">
+                            Exporter PDF
+                        </a>
+                    }
+                </div>
+
+                @if (_reportError is not null)
+                {
+                    <div class="alert-error">@_reportError</div>
+                }
+
+                @if (_report is not null)
+                {
+                    @if (_report.Lines.Count == 0)
+                    {
+                        <div class="hint">Aucune réservation pour cette période.</div>
+                    }
+                    else
+                    {
+                        <div style="overflow-x:auto">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Studio</th>
+                                        <th>Locataire</th>
+                                        <th>Propriétaire</th>
+                                        <th>Dates</th>
+                                        <th>Jours</th>
+                                        <th>Détail personnes</th>
+                                        <th>Montant</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var line in _report.Lines)
+                                    {
+                                        <tr>
+                                            <td><b>@line.StudioName</b></td>
+                                            <td>@line.TenantName</td>
+                                            <td>@line.OwnerName</td>
+                                            <td class="mono">@line.StartDate.ToString("dd/MM") → @line.EndDate.ToString("dd/MM")</td>
+                                            <td class="mono">@line.NumberOfDays</td>
+                                            <td>
+                                                @foreach (var pl in line.PersonLines)
+                                                {
+                                                    <div style="font-size:12px">
+                                                        @pl.ClientTypeLabel : @pl.AdultCount ad.
+                                                        @if (pl.ChildrenUnder3Count > 0)
+                                                        {
+                                                            <span>+ @pl.ChildrenUnder3Count enf.</span>
+                                                        }
+                                                        <span class="muted">× @pl.RatePerDay.ToString("0.00")€ = <b>@pl.LineAmount.ToString("0.00")€</b></span>
+                                                    </div>
+                                                }
+                                            </td>
+                                            <td class="mono"><b>@(line.TotalAmount.HasValue ? $"{line.TotalAmount:0.00} €" : "N/A")</b></td>
+                                            <td>
+                                                <span class="badge @GetReportStatusClass(line.Status)">@GetReportStatusLabel(line.Status)</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="margin-top:20px;display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+                            <div>
+                                <span class="muted" style="font-size:12px">Réservations</span><br />
+                                <b style="font-size:18px">@_report.Summary.TotalReservations</b>
+                            </div>
+                            <div>
+                                <span class="muted" style="font-size:12px">Nuitées</span><br />
+                                <b style="font-size:18px">@_report.Summary.TotalNights</b>
+                            </div>
+                            <div>
+                                <span class="muted" style="font-size:12px">Montant total</span><br />
+                                <b style="font-size:18px;color:var(--ok)">@_report.Summary.TotalAmount.ToString("0.00") €</b>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:16px;overflow-x:auto">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Propriétaire</th>
+                                        @foreach (var status in _report.Summary.ByStatus)
+                                        {
+                                            <th>
+                                                <span class="badge @GetReportStatusClass(status.Status)">@GetReportStatusLabel(status.Status)</span>
+                                            </th>
+                                        }
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var owner in _report.Summary.ByOwner)
+                                    {
+                                        <tr>
+                                            <td><b>@owner.OwnerName</b><br /><span class="muted" style="font-size:11px">@owner.Count rés. / @owner.TotalNights nuits</span></td>
+                                            @foreach (var status in _report.Summary.ByStatus)
+                                            {
+                                                var cell = _report.Summary.ByOwnerAndStatus
+                                                    .FirstOrDefault(x => x.OwnerName == owner.OwnerName && x.Status == status.Status);
+                                                <td class="mono">
+                                                    @if (cell is not null)
+                                                    {
+                                                        <span>@cell.TotalAmount.ToString("0.00") €</span>
+                                                        <br /><span class="muted" style="font-size:11px">@cell.Count rés.</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="muted">—</span>
+                                                    }
+                                                </td>
+                                            }
+                                            <td class="mono"><b>@owner.TotalAmount.ToString("0.00") €</b></td>
+                                        </tr>
+                                    }
+                                    <tr>
+                                        <td><b>Total</b></td>
+                                        @foreach (var status in _report.Summary.ByStatus)
+                                        {
+                                            <td class="mono"><b>@status.TotalAmount.ToString("0.00") €</b><br /><span class="muted" style="font-size:11px">@status.Count rés.</span></td>
+                                        }
+                                        <td class="mono"><b style="color:var(--ok)">@_report.Summary.TotalAmount.ToString("0.00") €</b></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -747,6 +917,101 @@
         public ClientType ClientType { get; } = clientType;
         public decimal Price { get; set; } = price;
     }
+
+    // ── Report tab ──
+
+    private string _reportMode = "month";
+    private int _reportYear = DateTime.Today.Year;
+    private int _reportMonth = DateTime.Today.Month;
+    private bool _loadingReport;
+    private string? _reportError;
+    private ReservationReportDto? _report;
+
+    private async Task SwitchToReportTab()
+    {
+        _activeTab = "report";
+    }
+
+    private async Task LoadReport()
+    {
+        _loadingReport = true;
+        _reportError = null;
+        _report = null;
+
+        try
+        {
+            var month = _reportMode == "month" ? _reportMonth : (int?)null;
+            _report = await Mediator.Send(
+                new EcbatanLocation.Application.Queries.GetReservationReport.GetReservationReportQuery(
+                    _reportYear, month));
+        }
+        catch (Exception ex)
+        {
+            _reportError = ex.Message;
+        }
+        finally
+        {
+            _loadingReport = false;
+        }
+    }
+
+    private void ReportPreviousPeriod()
+    {
+        if (_reportMode == "month")
+        {
+            _reportMonth--;
+            if (_reportMonth < 1) { _reportMonth = 12; _reportYear--; }
+        }
+        else
+        {
+            _reportYear--;
+        }
+        _report = null;
+    }
+
+    private void ReportNextPeriod()
+    {
+        if (_reportMode == "month")
+        {
+            _reportMonth++;
+            if (_reportMonth > 12) { _reportMonth = 1; _reportYear++; }
+        }
+        else
+        {
+            _reportYear++;
+        }
+        _report = null;
+    }
+
+    private string GetPdfUrl()
+    {
+        var month = _reportMode == "month" ? $"&month={_reportMonth}" : "";
+        return $"/api/report/pdf?year={_reportYear}{month}";
+    }
+
+    private static string GetReportMonthName(int month) => month switch
+    {
+        1 => "Janvier", 2 => "Février", 3 => "Mars", 4 => "Avril",
+        5 => "Mai", 6 => "Juin", 7 => "Juillet", 8 => "Août",
+        9 => "Septembre", 10 => "Octobre", 11 => "Novembre", 12 => "Décembre",
+        _ => month.ToString()
+    };
+
+    private static string GetReportStatusLabel(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Pending => "Demande",
+        ReservationStatus.Accepted => "Acceptée",
+        ReservationStatus.Confirmed => "Confirmée",
+        _ => status.ToString()
+    };
+
+    private static string GetReportStatusClass(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Pending => "st-pending",
+        ReservationStatus.Accepted => "st-accepted",
+        ReservationStatus.Confirmed => "st-confirmed",
+        _ => ""
+    };
 
     // ── Users tab ──
 

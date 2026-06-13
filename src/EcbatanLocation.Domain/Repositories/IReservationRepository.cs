@@ -15,4 +15,5 @@ public interface IReservationRepository
     Task<IReadOnlyList<Reservation>> GetByDateAsync(DateOnly date, CancellationToken ct = default);
     Task<bool> ExistsByOwnerAsync(Guid ownerId, CancellationToken ct = default);
     Task<bool> ExistsByStudioAsync(Guid studioId, CancellationToken ct = default);
+    Task<IReadOnlyList<Reservation>> GetByYearAsync(int year, CancellationToken ct = default);
 }

@@ -127,4 +127,14 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
     {
         return await context.Reservations.AnyAsync(r => r.StudioId == studioId, ct);
     }
+
+    public async Task<IReadOnlyList<Reservation>> GetByYearAsync(int year, CancellationToken ct = default)
+    {
+        var yearStart = new DateOnly(year, 1, 1);
+        var yearEnd = new DateOnly(year + 1, 1, 1);
+
+        return await context.Reservations
+            .Where(r => r.Dates.StartDate < yearEnd && r.Dates.EndDate > yearStart)
+            .ToListAsync(ct);
+    }
 }

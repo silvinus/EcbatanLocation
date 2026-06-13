@@ -21,7 +21,11 @@ builder.Services.AddRazorComponents()
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ThemeService>();
+builder.Services.AddSingleton<ReportPdfGenerator>();
+
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(AuthorizationBehavior<,>));
@@ -88,6 +92,21 @@ app.MapGet("/api/auth/logout", async (SignInManager<ApplicationUser> signInManag
     await signInManager.SignOutAsync();
     return Results.Redirect("/");
 }).RequireRateLimiting("fixed");
+
+app.MapGet("/api/report/pdf", async (
+    int year,
+    int? month,
+    IMediator mediator,
+    ReportPdfGenerator pdfGenerator) =>
+{
+    var report = await mediator.Send(
+        new EcbatanLocation.Application.Queries.GetReservationReport.GetReservationReportQuery(year, month));
+    var pdf = pdfGenerator.Generate(report);
+    var filename = month.HasValue
+        ? $"rapport-reservations-{year}-{month:D2}.pdf"
+        : $"rapport-reservations-{year}.pdf";
+    return Results.File(pdf, "application/pdf", filename);
+}).RequireAuthorization(policy => policy.RequireRole("Admin")).RequireRateLimiting("fixed");
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
