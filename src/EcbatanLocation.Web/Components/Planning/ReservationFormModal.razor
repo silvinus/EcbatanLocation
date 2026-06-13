@@ -188,6 +188,8 @@
 
     private void UpdateAllowedClientTypes()
     {
+        ClientType? studioDefaultType = null;
+
         if (_selectedStudio is null)
         {
             _allowedClientTypes = [ClientType.Owner, ClientType.GuestWithPresence, ClientType.Acquaintance];
@@ -196,17 +198,31 @@
         {
             var name = _selectedStudio.Name.ToLowerInvariant();
             if (name.Contains("mobil"))
+            {
                 _allowedClientTypes = [ClientType.MobileHome, ClientType.Owner, ClientType.GuestWithPresence];
+                studioDefaultType = ClientType.MobileHome;
+            }
             else if (name.Contains("tente") || name.Contains("emplacement"))
+            {
                 _allowedClientTypes = [ClientType.Tent, ClientType.Owner, ClientType.GuestWithPresence];
+                studioDefaultType = ClientType.Tent;
+            }
             else
+            {
                 _allowedClientTypes = [ClientType.Owner, ClientType.GuestWithPresence, ClientType.Acquaintance];
+            }
         }
 
         foreach (var line in _personLines)
         {
             if (!_allowedClientTypes.Contains(line.ClientType))
                 line.ClientType = _allowedClientTypes[0];
+        }
+
+        if (studioDefaultType.HasValue && _personLines.Count > 0
+            && _personLines[0].ClientType != studioDefaultType.Value)
+        {
+            _personLines[0].ClientType = studioDefaultType.Value;
         }
     }
 
