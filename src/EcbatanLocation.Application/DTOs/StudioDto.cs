@@ -7,4 +7,5 @@ public record StudioDto(
     bool HasKitchen,
     bool RentableAlone,
     bool Unavailable,
-    int DisplayOrder);
+    int DisplayOrder,
+    bool HasReservations = false);

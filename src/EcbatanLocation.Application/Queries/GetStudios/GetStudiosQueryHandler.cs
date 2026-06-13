@@ -5,15 +5,20 @@ using EcbatanLocation.Domain.Repositories;
 namespace EcbatanLocation.Application.Queries.GetStudios;
 
 public class GetStudiosQueryHandler(
-    IStudioRepository studioRepository) : IRequestHandler<GetStudiosQuery, IReadOnlyList<StudioDto>>
+    IStudioRepository studioRepository,
+    IReservationRepository reservationRepository) : IRequestHandler<GetStudiosQuery, IReadOnlyList<StudioDto>>
 {
     public async Task<IReadOnlyList<StudioDto>> Handle(GetStudiosQuery request, CancellationToken cancellationToken)
     {
         var studios = await studioRepository.GetAllAsync(cancellationToken);
 
-        return studios
-            .OrderBy(s => s.DisplayOrder)
-            .Select(s => new StudioDto(s.Id, s.Name, s.Capacity, s.HasKitchen, s.RentableAlone, s.Unavailable, s.DisplayOrder))
-            .ToList();
+        var results = new List<StudioDto>(studios.Count);
+        foreach (var s in studios.OrderBy(s => s.DisplayOrder))
+        {
+            var hasReservations = await reservationRepository.ExistsByStudioAsync(s.Id, cancellationToken);
+            results.Add(new StudioDto(s.Id, s.Name, s.Capacity, s.HasKitchen, s.RentableAlone, s.Unavailable, s.DisplayOrder, hasReservations));
+        }
+
+        return results;
     }
 }
