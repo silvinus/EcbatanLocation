@@ -4,9 +4,19 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Cible de déploiement'
+        type: choice
+        options:
+          - northflank
+          - fly
+        default: northflank
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   setup:
@@ -120,7 +130,55 @@ jobs:
           generate_release_notes: true
           files: ecbatan-location-${{ needs.setup.outputs.version }}-linux-x64.tar.gz
 
-  deploy:
+  deploy-northflank:
+    if: inputs.target != 'fly'
+    runs-on: ubuntu-latest
+    needs: [test, release]
+    concurrency:
+      group: northflank-deploy
+      cancel-in-progress: false
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Deploy to Northflank
+        uses: northflank/deploy-to-northflank@v1
+        with:
+          northflank-api-key: ${{ secrets.NORTHFLANK_API_KEY }}
+          project-id: ${{ secrets.NORTHFLANK_PROJECT_ID }}
+          service-id: ${{ secrets.NORTHFLANK_SERVICE_ID }}
+          image-path: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          credentials-id: ${{ secrets.NORTHFLANK_CREDENTIALS_ID }}
+
+  deploy-fly:
+    if: inputs.target == 'fly'
     runs-on: ubuntu-latest
     needs: [test, release]
     concurrency:
