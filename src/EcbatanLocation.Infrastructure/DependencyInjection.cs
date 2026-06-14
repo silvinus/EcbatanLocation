@@ -18,9 +18,20 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         services.AddScoped<DomainEventDispatchInterceptor>();
+
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+        var databaseProvider = configuration.GetValue<string>("DatabaseProvider") ?? "Sqlite";
+
         services.AddDbContext<EcbatanLocationDbContext>((serviceProvider, options) =>
-            options.UseSqlite(configuration.GetConnectionString("DefaultConnection"))
-                   .AddInterceptors(serviceProvider.GetRequiredService<DomainEventDispatchInterceptor>()));
+        {
+            if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
+                options.UseNpgsql(connectionString);
+            else
+                options.UseSqlite(connectionString);
+
+            options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventDispatchInterceptor>());
+        });
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>
             {

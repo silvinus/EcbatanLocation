@@ -12,7 +12,7 @@ Le planning est consultable publiquement (lecture seule) et éditable par les pr
 | Frontend | Blazor Server (.NET 10) |
 | Backend | ASP.NET Core 10 |
 | Authentification | ASP.NET Identity |
-| Base de données | SQLite (via EF Core) |
+| Base de données | SQLite (dev) / PostgreSQL (prod), switch via `DatabaseProvider` dans settings |
 | Architecture | DDD + CQRS (MediatR) |
 | Déploiement | Standalone sur VPS Linux (pas de microservices) |
 
