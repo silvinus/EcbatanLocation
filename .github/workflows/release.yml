@@ -174,7 +174,7 @@ jobs:
           northflank-api-key: ${{ secrets.NORTHFLANK_API_KEY }}
           project-id: ${{ secrets.NORTHFLANK_PROJECT_ID }}
           service-id: ${{ secrets.NORTHFLANK_SERVICE_ID }}
-          image-path: ghcr.io/${{ github.repository_owner }}/ecbatanlocation:sha-${{ github.sha }}
+          image-path: ghcr.io/${{ github.repository_owner }}/ecbatanlocation:latest
           credentials-id: ${{ secrets.NORTHFLANK_CREDENTIALS_ID }}
 
   deploy-fly:
