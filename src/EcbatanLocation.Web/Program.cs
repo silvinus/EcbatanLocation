@@ -12,6 +12,7 @@ using EcbatanLocation.Web.Behaviors;
 using EcbatanLocation.Web.Components;
 using EcbatanLocation.Web.Components.Account;
 using EcbatanLocation.Web.Services;
+using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,9 +54,18 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.SlidingExpiration = true;
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 var app = builder.Build();
 
 await DbInitializer.InitializeAsync(app.Services);
+
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
