@@ -10,7 +10,8 @@ COPY src/EcbatanLocation.Web/EcbatanLocation.Web.csproj src/EcbatanLocation.Web/
 RUN dotnet restore src/EcbatanLocation.Web/EcbatanLocation.Web.csproj
 
 COPY src/ src/
-RUN dotnet publish src/EcbatanLocation.Web/EcbatanLocation.Web.csproj -c Release -o /app/publish
+ARG APP_VERSION=0.0.0-dev
+RUN dotnet publish src/EcbatanLocation.Web/EcbatanLocation.Web.csproj -c Release -o /app/publish -p:Version=$APP_VERSION
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 RUN apt-get update && apt-get install -y --no-install-recommends libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/*

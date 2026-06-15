@@ -1,3 +1,12 @@
+.app-version {
+    margin-top: 1.5rem;
+    padding: 0.75rem 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.7;
+}
+
 #blazor-error-ui {
     color-scheme: light only;
     background: lightyellow;
