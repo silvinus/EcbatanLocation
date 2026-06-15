@@ -17,7 +17,7 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        services.AddScoped<DomainEventDispatchInterceptor>();
+        services.AddScoped<DomainEventCollectorInterceptor>();
 
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -32,7 +32,7 @@ public static class DependencyInjection
                 options.UseSqlite(connectionString,
                     x => x.MigrationsAssembly("EcbatanLocation.Infrastructure.Migrations.Sqlite"));
 
-            options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventDispatchInterceptor>());
+            options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventCollectorInterceptor>());
         });
 
         services.AddIdentity<ApplicationUser, IdentityRole>(options =>

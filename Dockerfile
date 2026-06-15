@@ -4,6 +4,8 @@ WORKDIR /src
 COPY src/EcbatanLocation.Domain/EcbatanLocation.Domain.csproj src/EcbatanLocation.Domain/
 COPY src/EcbatanLocation.Application/EcbatanLocation.Application.csproj src/EcbatanLocation.Application/
 COPY src/EcbatanLocation.Infrastructure/EcbatanLocation.Infrastructure.csproj src/EcbatanLocation.Infrastructure/
+COPY src/EcbatanLocation.Infrastructure.Migrations.Sqlite/EcbatanLocation.Infrastructure.Migrations.Sqlite.csproj src/EcbatanLocation.Infrastructure.Migrations.Sqlite/
+COPY src/EcbatanLocation.Infrastructure.Migrations.PostgreSQL/EcbatanLocation.Infrastructure.Migrations.PostgreSQL.csproj src/EcbatanLocation.Infrastructure.Migrations.PostgreSQL/
 COPY src/EcbatanLocation.Web/EcbatanLocation.Web.csproj src/EcbatanLocation.Web/
 RUN dotnet restore src/EcbatanLocation.Web/EcbatanLocation.Web.csproj
 

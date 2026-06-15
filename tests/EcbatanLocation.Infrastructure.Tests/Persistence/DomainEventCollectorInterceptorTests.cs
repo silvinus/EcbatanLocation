@@ -1,33 +1,32 @@
-using EcbatanLocation.Application.Messaging;
+using EcbatanLocation.Application;
+using EcbatanLocation.Application.Events;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using EcbatanLocation.Application;
 using EcbatanLocation.Domain.Entities;
 using EcbatanLocation.Domain.Enums;
+using EcbatanLocation.Domain.Events;
 using EcbatanLocation.Domain.ValueObjects;
 using EcbatanLocation.Infrastructure.Persistence;
 
 namespace EcbatanLocation.Infrastructure.Tests.Persistence;
 
-public class DomainEventDispatchInterceptorTests
+public class DomainEventCollectorInterceptorTests
 {
     [Fact]
-    public async Task SavingChanges_PublishesDomainEvents_ThroughMediator()
+    public async Task SavingChanges_CollectsDomainEvents_IntoAccumulatorAndClearsAggregate()
     {
-        var logs = new List<string>();
         var services = new ServiceCollection();
         services.AddApplication();
-        services.AddLogging(b => b.AddProvider(new CapturingLoggerProvider(logs)));
         var provider = services.BuildServiceProvider();
-        var mediator = provider.GetRequiredService<IMediator>();
+        using var scope = provider.CreateScope();
+        var accumulator = scope.ServiceProvider.GetRequiredService<IDomainEventAccumulator>();
 
         using var connection = new SqliteConnection("DataSource=:memory:");
         connection.Open();
         var options = new DbContextOptionsBuilder<EcbatanLocationDbContext>()
             .UseSqlite(connection)
-            .AddInterceptors(new DomainEventDispatchInterceptor(mediator))
+            .AddInterceptors(new DomainEventCollectorInterceptor(accumulator))
             .Options;
 
         await using var context = new EcbatanLocationDbContext(options);
@@ -43,24 +42,14 @@ public class DomainEventDispatchInterceptorTests
         context.Reservations.Add(reservation);
         await context.SaveChangesAsync();
 
-        Assert.Contains(logs, l => l.Contains(reservation.Id.ToString()) && l.Contains("created"));
-        // Events are cleared after dispatch so they fire exactly once.
+        // The interceptor only buffers; it does not dispatch. The event sits in the accumulator
+        // and is cleared from the aggregate so it can never fire twice.
         Assert.Empty(reservation.DomainEvents);
-    }
 
-    private sealed class CapturingLoggerProvider(List<string> sink) : ILoggerProvider
-    {
-        public ILogger CreateLogger(string categoryName) => new CapturingLogger(sink);
-        public void Dispose() { }
+        var collected = accumulator.Collect();
+        Assert.Contains(collected, e => e is ReservationCreated c && c.ReservationId == reservation.Id);
 
-        private sealed class CapturingLogger(List<string> sink) : ILogger
-        {
-            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-            public bool IsEnabled(LogLevel logLevel) => true;
-
-            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
-                Exception? exception, Func<TState, Exception?, string> formatter)
-                => sink.Add(formatter(state, exception));
-        }
+        // Collect() drains the buffer.
+        Assert.Empty(accumulator.Collect());
     }
 }

@@ -45,6 +45,18 @@ EcbatanLocation.sln
 - Les Queries lisent l'état (planning mensuel, détail réservation, KPIs).
 - Les handlers ne sont jamais appelés directement depuis les composants Blazor.
 
+### Isolation du DbContext (Blazor Server)
+
+- Le circuit Blazor Server est long-lived et peut rendre plusieurs composants en parallèle. Un `DbContext` *scoped* partagé sur tout le circuit provoque l'erreur *« A second operation was started on this context instance »*.
+- **Le `Mediator` exécute donc chaque handler dans un scope DI enfant frais** (`IServiceScopeFactory.CreateScope()`) : chaque Command/Query obtient son propre `DbContext`, isolé des opérations concurrentes. Les pipeline behaviors restent résolus dans le scope appelant (pour conserver les services du circuit comme `AuthenticationStateProvider`).
+- **Invariant à respecter** : les repositories (et `DbContext`) ne sont injectés **que** dans des handlers MediatR, jamais directement dans un composant Blazor ni un service à durée de vie circuit. Injecter un repository dans un composant ré-introduirait le bug de concurrence en contournant l'isolation par scope.
+
+### Domain events — dispatch post-commit (best-effort)
+
+- Les domain events sont **collectés** pendant `SaveChanges` par `DomainEventCollectorInterceptor` dans un `IDomainEventAccumulator` (scoped), puis **dispatchés par le `Mediator` après le retour du handler** — donc **après le commit** de la transaction.
+- Sémantique assumée et garantie *structurellement* (pas par convention) : les handlers de domain events sont des **réactions post-commit, best-effort** (notifier, logger, auditer). Ils se déclenchent **uniquement si l'opération a réussi**, s'exécutent **hors de la transaction d'écriture** de l'agrégat, et une exception dans un handler est loggée mais **ne fait pas échouer** l'opération déjà committée (livraison at-most-once).
+- Les **invariants métier** (chevauchement, capacité, dépendance studio) sont enforced **synchroniquement** dans l'agrégat + le repository + les contraintes BDD — **jamais** dans un handler de domain event. Si un effet de bord devait un jour être atomique avec l'écriture, ce serait un cas d'**outbox**, pas un handler post-commit.
+
 ## Modèle métier
 
 ### Hébergements (Studios) - Catalogue figé

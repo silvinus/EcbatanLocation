@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using EcbatanLocation.Application.Events;
 
 namespace EcbatanLocation.Application.Messaging;
 
@@ -13,6 +14,7 @@ public static class MessagingServiceCollectionExtensions
     public static IServiceCollection AddMediator(this IServiceCollection services, Assembly assembly)
     {
         services.AddScoped<IMediator, Mediator>();
+        services.AddScoped<IDomainEventAccumulator, DomainEventAccumulator>();
 
         foreach (var type in assembly.GetTypes().Where(t => t is { IsAbstract: false, IsInterface: false }))
         {

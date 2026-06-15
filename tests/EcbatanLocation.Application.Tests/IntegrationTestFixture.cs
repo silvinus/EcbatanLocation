@@ -42,7 +42,7 @@ public class IntegrationTestFixture : IAsyncLifetime
 
                     services.AddDbContext<EcbatanLocationDbContext>((sp, options) =>
                         options.UseSqlite($"Data Source={_dbPath}")
-                               .AddInterceptors(sp.GetRequiredService<DomainEventDispatchInterceptor>()));
+                               .AddInterceptors(sp.GetRequiredService<DomainEventCollectorInterceptor>()));
 
                     var authDescriptors = services
                         .Where(d => d.ServiceType == typeof(AuthenticationStateProvider))
