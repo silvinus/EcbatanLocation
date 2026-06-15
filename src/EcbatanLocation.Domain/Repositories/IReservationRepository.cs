@@ -14,6 +14,8 @@ public interface IReservationRepository
     Task<IReadOnlyList<Reservation>> GetByOwnerAndOverlappingDatesAsync(Guid ownerId, DateRange dates, CancellationToken ct = default);
     Task<IReadOnlyList<Reservation>> GetByDateAsync(DateOnly date, CancellationToken ct = default);
     Task<bool> ExistsByOwnerAsync(Guid ownerId, CancellationToken ct = default);
+    Task<IReadOnlySet<Guid>> GetOwnerIdsWithReservationsAsync(CancellationToken ct = default);
     Task<bool> ExistsByStudioAsync(Guid studioId, CancellationToken ct = default);
+    Task<IReadOnlySet<Guid>> GetStudioIdsWithReservationsAsync(CancellationToken ct = default);
     Task<IReadOnlyList<Reservation>> GetByYearAsync(int year, CancellationToken ct = default);
 }

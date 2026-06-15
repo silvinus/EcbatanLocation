@@ -14,30 +14,14 @@ public class GetUsersQueryHandler(
     {
         var users = await userService.GetAllUsersAsync(cancellationToken);
         var owners = await ownerRepository.GetAllAsync(cancellationToken);
+        var ownerIdsWithReservations = await reservationRepository.GetOwnerIdsWithReservationsAsync(cancellationToken);
         var ownerByUserId = owners.ToDictionary(o => o.UserId);
 
-        var result = new List<UserDto>();
-
-        foreach (var user in users)
+        return users.Select(user =>
         {
-            var isOwner = ownerByUserId.ContainsKey(user.UserId);
-            var hasReservations = false;
-
-            if (isOwner)
-            {
-                var owner = ownerByUserId[user.UserId];
-                hasReservations = await reservationRepository.ExistsByOwnerAsync(owner.Id, cancellationToken);
-            }
-
-            result.Add(new UserDto(
-                user.UserId,
-                user.DisplayName,
-                user.Email,
-                user.Roles,
-                isOwner,
-                hasReservations));
-        }
-
-        return result;
+            var isOwner = ownerByUserId.TryGetValue(user.UserId, out var owner);
+            var hasReservations = isOwner && ownerIdsWithReservations.Contains(owner!.Id);
+            return new UserDto(user.UserId, user.DisplayName, user.Email, user.Roles, isOwner, hasReservations);
+        }).ToList();
     }
 }

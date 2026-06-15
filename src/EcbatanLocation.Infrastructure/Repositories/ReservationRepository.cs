@@ -60,11 +60,6 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
         await tx.CommitAsync(ct);
     }
 
-    /// <summary>
-    /// Authoritative overlap check performed inside the write transaction, closing the
-    /// time-of-check/time-of-use race between the UI pre-check and persistence.
-    /// The unique index on (StudioId, StartDate, EndDate) is the final database-level backstop.
-    /// </summary>
     private async Task GuardNoOverlapAsync(Reservation reservation, CancellationToken ct)
     {
         var overlap = await context.Reservations
@@ -123,9 +118,27 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
         return await context.Reservations.AnyAsync(r => r.OwnerId == ownerId, ct);
     }
 
+    public async Task<IReadOnlySet<Guid>> GetOwnerIdsWithReservationsAsync(CancellationToken ct = default)
+    {
+        var ids = await context.Reservations
+            .Select(r => r.OwnerId)
+            .Distinct()
+            .ToListAsync(ct);
+        return ids.ToHashSet();
+    }
+
     public async Task<bool> ExistsByStudioAsync(Guid studioId, CancellationToken ct = default)
     {
         return await context.Reservations.AnyAsync(r => r.StudioId == studioId, ct);
+    }
+
+    public async Task<IReadOnlySet<Guid>> GetStudioIdsWithReservationsAsync(CancellationToken ct = default)
+    {
+        var ids = await context.Reservations
+            .Select(r => r.StudioId)
+            .Distinct()
+            .ToListAsync(ct);
+        return ids.ToHashSet();
     }
 
     public async Task<IReadOnlyList<Reservation>> GetByYearAsync(int year, CancellationToken ct = default)
