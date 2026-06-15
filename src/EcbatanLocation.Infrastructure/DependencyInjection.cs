@@ -26,9 +26,11 @@ public static class DependencyInjection
         services.AddDbContext<EcbatanLocationDbContext>((serviceProvider, options) =>
         {
             if (databaseProvider.Equals("PostgreSQL", StringComparison.OrdinalIgnoreCase))
-                options.UseNpgsql(connectionString);
+                options.UseNpgsql(connectionString,
+                    x => x.MigrationsAssembly("EcbatanLocation.Infrastructure.Migrations.PostgreSQL"));
             else
-                options.UseSqlite(connectionString);
+                options.UseSqlite(connectionString,
+                    x => x.MigrationsAssembly("EcbatanLocation.Infrastructure.Migrations.Sqlite"));
 
             options.AddInterceptors(serviceProvider.GetRequiredService<DomainEventDispatchInterceptor>());
         });

@@ -2,6 +2,8 @@
   <Folder Name="/src/">
     <Project Path="src/EcbatanLocation.Application/EcbatanLocation.Application.csproj" />
     <Project Path="src/EcbatanLocation.Domain/EcbatanLocation.Domain.csproj" />
+    <Project Path="src/EcbatanLocation.Infrastructure.Migrations.PostgreSQL/EcbatanLocation.Infrastructure.Migrations.PostgreSQL.csproj" />
+    <Project Path="src/EcbatanLocation.Infrastructure.Migrations.Sqlite/EcbatanLocation.Infrastructure.Migrations.Sqlite.csproj" />
     <Project Path="src/EcbatanLocation.Infrastructure/EcbatanLocation.Infrastructure.csproj" />
     <Project Path="src/EcbatanLocation.Web/EcbatanLocation.Web.csproj" />
   </Folder>

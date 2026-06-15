@@ -16,10 +16,7 @@ public static class DbInitializer
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-        if (context.Database.IsNpgsql())
-            await context.Database.EnsureCreatedAsync();
-        else
-            await context.Database.MigrateAsync();
+        await context.Database.MigrateAsync();
 
         await SeedRolesAsync(roleManager);
         await SeedOwnersAsync(context, userManager);

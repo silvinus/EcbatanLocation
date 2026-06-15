@@ -8,17 +8,17 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace EcbatanLocation.Infrastructure.Migrations
+namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
 {
     [DbContext(typeof(EcbatanLocationDbContext))]
-    [Migration("20260610184455_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260612214705_AddStudioUnavailable")]
+    partial class AddStudioUnavailable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
 
             modelBuilder.Entity("EcbatanLocation.Domain.Entities.Owner", b =>
                 {
@@ -159,6 +159,11 @@ namespace EcbatanLocation.Infrastructure.Migrations
 
                     b.Property<bool>("RentableAlone")
                         .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Unavailable")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
 
                     b.HasKey("Id");
 
