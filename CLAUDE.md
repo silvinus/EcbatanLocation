@@ -93,7 +93,7 @@ Règles invariantes :
 - Un studio est **libre ou occupé** (pas de location partielle)
 - **Aucun chevauchement** de réservations sur un même studio pour des dates qui se croisent
 - Un studio **non louable seul** ne peut être réservé que conjointement avec un studio indépendant sur les mêmes dates par le même propriétaire
-- Capacité : Adultes + Enfants ≤ Capacité du studio
+- Capacité : Adultes ≤ Capacité du studio (les enfants de moins de 3 ans ne comptent pas)
 
 ### Tarification (versionnée par année)
 

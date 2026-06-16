@@ -121,9 +121,8 @@ public class Reservation : IHasDomainEvents
         if (totalAdults < 1)
             throw new ArgumentException("At least one adult is required.");
 
-        var totalPersons = lines.Sum(l => l.TotalPersons);
-        if (totalPersons > studioCapacity)
+        if (totalAdults > studioCapacity)
             throw new InvalidOperationException(
-                $"Capacity exceeded: {totalPersons} persons for a capacity of {studioCapacity}.");
+                $"Capacity exceeded: {totalAdults} adults for a capacity of {studioCapacity}.");
     }
 }
