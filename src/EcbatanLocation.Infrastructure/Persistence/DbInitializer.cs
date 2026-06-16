@@ -32,11 +32,11 @@ public static class DbInitializer
     /// </summary>
     private static async Task EnsureAdminsAsync(UserManager<ApplicationUser> userManager)
     {
-        var christophe = await userManager.FindByEmailAsync("christophe@EcbatanLocation.fr");
+        var christophe = await userManager.FindByEmailAsync("christophe@ecbatanelocation.fr");
         if (christophe is not null && !await userManager.IsInRoleAsync(christophe, "Admin"))
             await userManager.AddToRoleAsync(christophe, "Admin");
 
-        const string sylvainEmail = "sylvain@EcbatanLocation.fr";
+        const string sylvainEmail = "sylvain@ecbatanelocation.fr";
         var sylvain = await userManager.FindByEmailAsync(sylvainEmail);
         if (sylvain is null)
         {
@@ -77,10 +77,10 @@ public static class DbInitializer
 
         var ownersData = new[]
         {
-            ("Léa", "lea@EcbatanLocation.fr"),
-            ("Sarah", "sarah@EcbatanLocation.fr"),
-            ("Jean", "jean@EcbatanLocation.fr"),
-            ("Christophe", "christophe@EcbatanLocation.fr")
+            ("Léa", "lea@ecbatanelocation.fr"),
+            ("Sarah", "sarah@ecbatanelocation.fr"),
+            ("Jean", "jean@ecbatanelocation.fr"),
+            ("Christophe", "christophe@ecbatanelocation.fr")
         };
 
         foreach (var (name, email) in ownersData)
