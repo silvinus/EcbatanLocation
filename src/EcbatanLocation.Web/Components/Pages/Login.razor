@@ -31,6 +31,12 @@
                                @onchange="e => Input.Password = e.Value?.ToString() ?? string.Empty" />
                         <ValidationMessage For="() => Input.Password" />
                     </div>
+                    <div class="field checkbox-field">
+                        <label class="checkbox-label">
+                            <InputCheckbox @bind-Value="Input.RememberMe" />
+                            Se souvenir de moi
+                        </label>
+                    </div>
                     <button type="submit" class="btn primary full-width" disabled="@_submitting">
                         @(_submitting ? "Connexion…" : "Se connecter")
                     </button>
@@ -71,7 +77,7 @@
         try
         {
             var result = await SignInManager.PasswordSignInAsync(
-                Input.Email, Input.Password, isPersistent: true, lockoutOnFailure: false);
+                Input.Email, Input.Password, isPersistent: Input.RememberMe, lockoutOnFailure: true);
 
             if (result.Succeeded)
             {
@@ -100,5 +106,7 @@
 
         [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Le mot de passe est requis.")]
         public string Password { get; set; } = "";
+
+        public bool RememberMe { get; set; }
     }
 }

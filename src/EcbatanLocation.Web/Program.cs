@@ -50,8 +50,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Strict;
-    options.ExpireTimeSpan = TimeSpan.FromDays(30);
-    options.SlidingExpiration = true;
+    options.ExpireTimeSpan = TimeSpan.FromHours(2);
+    options.SlidingExpiration = false;
 });
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>

@@ -50,7 +50,7 @@ public class UserManagementCommandHandlerTests(IntegrationTestFixture fixture)
         AuthState.SetAdmin();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            Mediator.Send(new CreateUserCommand("Dup", "lea@EcbatanLocation.fr", ["Owner"])));
+            Mediator.Send(new CreateUserCommand("Dup", "lea@ecbatanelocation.fr", ["Owner"])));
     }
 
     [Fact]
