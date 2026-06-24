@@ -50,10 +50,9 @@ public interface IPipelineBehavior<in TRequest, TResponse>
     Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken);
 }
 
-/// <summary>Sends requests to their handler (through the behavior pipeline) and publishes notifications.</summary>
+/// <summary>Sends requests to their handler through the behavior pipeline.</summary>
 public interface IMediator
 {
     Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default);
     Task Send(IRequest request, CancellationToken cancellationToken = default);
-    Task Publish(INotification notification, CancellationToken cancellationToken = default);
 }
