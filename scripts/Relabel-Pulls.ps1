@@ -43,6 +43,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Forcer l'UTF-8 pour les échanges avec gh (titres de PR accentués).
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = $utf8
+try { [Console]::OutputEncoding = $utf8 } catch {}
+try { [Console]::InputEncoding = $utf8 } catch {}
+
 if (-not $Repo) {
     $Repo = gh repo view --json nameWithOwner -q '.nameWithOwner'
 }

@@ -37,6 +37,14 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Forcer l'UTF-8 pour les échanges avec gh : sinon, selon la page de code du
+# terminal, les octets UTF-8 renvoyés par gh sont décodés en CP850/1252 et les
+# accents sont corrompus (é -> ├®). Indépendant des réglages du terminal.
+$utf8 = [System.Text.UTF8Encoding]::new($false)
+$OutputEncoding = $utf8
+try { [Console]::OutputEncoding = $utf8 } catch {}
+try { [Console]::InputEncoding = $utf8 } catch {}
+
 # --- Catégories, en miroir de .github/release.yml (ordre = priorité) ---------
 $categories = [ordered]@{
     '🐛 Corrections'     = @('bug', 'fix')
