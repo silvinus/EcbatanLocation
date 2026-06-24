@@ -4,33 +4,7 @@
 
 <PageTitle>Ecbatan Location</PageTitle>
 
-<div class="layout">
-    <aside class="sidebar card">
-        <div class="hd">
-            <h2>Filtres & synthèse</h2>
-            <span class="pill mono">@Year-@Month.ToString("D2")</span>
-        </div>
-        <div class="bd grid">
-            <FiltersSummary Studios="@_studios"
-                            Owners="@_owners"
-                            Year="@Year"
-                            Month="@Month"
-                            SelectedStudioId="@SelectedStudioId"
-                            SelectedStatus="@SelectedStatus"
-                            SelectedOwnerId="@SelectedOwnerId"
-                            SelectedDate="@_selectedDate"
-                            RangeStart="@_rangeStart"
-                            RangeEnd="@_rangeEnd"
-                            Occupation="@_occupation"
-                            RangeOccupation="@_rangeOccupation"
-                            OnYearMonthChanged="OnYearMonthChanged"
-                            OnStudioChanged="OnStudioChanged"
-                            OnStatusChanged="OnStatusChanged"
-                            OnOwnerChanged="OnOwnerChanged"
-                            OnClearRange="ClearRange" />
-        </div>
-    </aside>
-
+<div class="planning-page">
     <main class="card">
         <div class="hd">
             <div class="month-nav">
@@ -39,6 +13,13 @@
                 <button class="btn-nav" @onclick="NextMonth" aria-label="Mois suivant">&gt;</button>
             </div>
             <div class="toolbar">
+                <button class="btn @(_showFilters ? "active" : null)" @onclick="ToggleFilters" aria-pressed="@_showFilters">
+                    <span>&#9776; Filtres</span>
+                    @if (ActiveFilterCount > 0)
+                    {
+                        <span class="count-badge">@ActiveFilterCount</span>
+                    }
+                </button>
                 <div class="chips">
                     @if (IsMobile)
                     {
@@ -48,12 +29,32 @@
                     <button class="chip @(_viewMode == ViewMode.Week ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.Week)" @onclick="() => SelectView(ViewMode.Week)">Semaine</button>
                     <button class="chip @(_viewMode == ViewMode.List ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.List)" @onclick="() => SelectView(ViewMode.List)">Liste</button>
                 </div>
+                <div class="help-wrap">
+                    <button class="btn-help @(_showHelp ? "active" : null)" @onclick="ToggleHelp" aria-label="Aide et légende" title="Aide et légende">?</button>
+                    @if (_showHelp)
+                    {
+                        <div class="popover-backdrop" @onclick="CloseHelp"></div>
+                        <div class="help-popover card">
+                            <HelpPopover />
+                        </div>
+                    }
+                </div>
                 @if (_isAuthenticated)
                 {
                     <button class="btn primary" @onclick="OpenCreateModal">+ Nouvelle réservation</button>
                 }
             </div>
         </div>
+
+        <div class="kpi-band-wrap">
+            <OccupationBar SelectedDate="@_selectedDate"
+                           RangeStart="@_rangeStart"
+                           RangeEnd="@_rangeEnd"
+                           Occupation="@_occupation"
+                           RangeOccupation="@_rangeOccupation"
+                           OnClearRange="ClearRange" />
+        </div>
+
         <div class="bd planning">
             @if (_loading)
             {
@@ -94,6 +95,32 @@
         </div>
     </main>
 </div>
+
+@if (_showFilters)
+{
+    <div class="offcanvas-overlay" @onclick="CloseFilters"></div>
+    <aside class="offcanvas card">
+        <div class="hd">
+            <h2>Filtres &amp; synthèse</h2>
+            <button class="x" @onclick="CloseFilters" aria-label="Fermer">&#x2715;</button>
+        </div>
+        <div class="bd grid">
+            <FiltersPanel Studios="@_studios"
+                          Owners="@_owners"
+                          Year="@Year"
+                          Month="@Month"
+                          SelectedStudioId="@SelectedStudioId"
+                          SelectedStatus="@SelectedStatus"
+                          SelectedOwnerId="@SelectedOwnerId"
+                          RangeStart="@_rangeStart"
+                          OnYearMonthChanged="OnYearMonthChanged"
+                          OnStudioChanged="OnStudioChanged"
+                          OnStatusChanged="OnStatusChanged"
+                          OnOwnerChanged="OnOwnerChanged"
+                          OnClearRange="ClearRange" />
+        </div>
+    </aside>
+}
 
 @if (_selectedReservation is not null && !_showFormModal && !_showDeleteModal)
 {

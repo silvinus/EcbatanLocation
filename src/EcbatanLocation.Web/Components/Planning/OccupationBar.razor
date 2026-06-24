@@ -1,0 +1,62 @@
+<div class="kpi kpi-band">
+    <div class="box">
+        @if (Occupation is not null)
+        {
+            <div class="big">@Occupation.OccupiedPlaces / @Occupation.TotalCapacity</div>
+        }
+        else
+        {
+            <div class="big">-- / --</div>
+        }
+        <div class="lab">Places occup&#233;es@(SelectedDate.HasValue ? $" ({SelectedDate.Value:dd/MM})" : " (auj.)")</div>
+    </div>
+    <div class="box">
+        @if (Occupation is not null)
+        {
+            <div class="big">@Occupation.OccupiedStudios</div>
+        }
+        else
+        {
+            <div class="big">--</div>
+        }
+        <div class="lab">Studios occup&#233;s@(SelectedDate.HasValue ? $" ({SelectedDate.Value:dd/MM})" : " (auj.)")</div>
+    </div>
+
+    @if (RangeStart.HasValue && RangeEnd.HasValue && RangeOccupation is not null)
+    {
+        <div class="box accent">
+            <div class="big">@RangeOccupation.AverageOccupancyRate<span class="unit">%</span></div>
+            <div class="lab">Taux moyen (@RangeOccupation.DaysInRange j.)</div>
+        </div>
+        <div class="box accent">
+            <div class="big">@RangeOccupation.AverageOccupiedPlaces<span class="unit"> / @RangeOccupation.TotalCapacity</span></div>
+            <div class="lab">Places moy. occup&#233;es</div>
+        </div>
+        <div class="box range-box">
+            <div class="range-header">
+                <span class="range-label">@RangeStart.Value.ToString("dd/MM") &#8594; @RangeEnd.Value.ToString("dd/MM")</span>
+                <button class="x-small" @onclick="OnClearRange" title="R&#233;initialiser la plage">&#x2715;</button>
+            </div>
+            <div class="lab">P&#233;riode s&#233;lectionn&#233;e</div>
+        </div>
+    }
+    else if (RangeStart.HasValue && !RangeEnd.HasValue)
+    {
+        <div class="box range-box">
+            <div class="range-header">
+                <span class="range-label hint">D&#233;but : @RangeStart.Value.ToString("dd/MM")</span>
+                <button class="x-small" @onclick="OnClearRange" title="Annuler">&#x2715;</button>
+            </div>
+            <div class="lab">Cliquez un 2e jour</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public DateOnly? SelectedDate { get; set; }
+    [Parameter] public DateOnly? RangeStart { get; set; }
+    [Parameter] public DateOnly? RangeEnd { get; set; }
+    [Parameter] public DailyOccupationDto? Occupation { get; set; }
+    [Parameter] public RangeOccupationDto? RangeOccupation { get; set; }
+    [Parameter] public EventCallback OnClearRange { get; set; }
+}
