@@ -7,6 +7,7 @@ COPY src/EcbatanLocation.Infrastructure/EcbatanLocation.Infrastructure.csproj sr
 COPY src/EcbatanLocation.Infrastructure.Migrations.Sqlite/EcbatanLocation.Infrastructure.Migrations.Sqlite.csproj src/EcbatanLocation.Infrastructure.Migrations.Sqlite/
 COPY src/EcbatanLocation.Infrastructure.Migrations.PostgreSQL/EcbatanLocation.Infrastructure.Migrations.PostgreSQL.csproj src/EcbatanLocation.Infrastructure.Migrations.PostgreSQL/
 COPY src/EcbatanLocation.Web/EcbatanLocation.Web.csproj src/EcbatanLocation.Web/
+COPY Directory.Packages.props
 RUN dotnet restore src/EcbatanLocation.Web/EcbatanLocation.Web.csproj
 
 COPY src/ src/
