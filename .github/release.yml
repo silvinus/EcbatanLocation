@@ -1,0 +1,27 @@
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: 🐛 Corrections
+      labels:
+        - bug
+        - fix
+    - title: 🚀 Fonctionnalités
+      labels:
+        - enhancement
+        - feat
+        - feature
+    - title: 📝 Documentation
+      labels:
+        - documentation
+        - docs
+    - title: 🤖 Dépendances
+      labels:
+        - dependencies
+    - title: 🔧 CI / Build
+      labels:
+        - ci
+    - title: 🔄 Autres changements
+      labels:
+        - "*"
