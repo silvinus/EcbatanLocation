@@ -6,7 +6,6 @@
     <div class="sub">
         <span>@Reservation.PersonLines.Sum(l => l.AdultCount) ad.</span>
         <span>@Reservation.PersonLines.Sum(l => l.ChildrenUnder3Count) &lt;3a</span>
-        <span class="badge">@GetStatusLabel()</span>
     </div>
     @if (Reservation.LinkGroupIndex >= 0)
     {
