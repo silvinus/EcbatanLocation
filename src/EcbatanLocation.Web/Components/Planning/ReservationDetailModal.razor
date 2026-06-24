@@ -52,13 +52,49 @@
                 </div>
             </div>
 
+            @if (Reservation.IsDependent && Reservation.ParentStudioName is not null)
+            {
+                <div class="sep"></div>
+                <div class="detail-grid">
+                    <div class="detail-item" style="grid-column: 1 / -1">
+                        <span class="label">Réservation parente</span>
+                        <span class="value">
+                            <button class="btn-link" @onclick="() => NavigateToReservation(Reservation.ParentReservationId!.Value)">
+                                @Reservation.ParentStudioName — @Reservation.ParentTenantName
+                            </button>
+                        </span>
+                    </div>
+                </div>
+            }
+
+            @if (Reservation.Dependents is not null && Reservation.Dependents.Count > 0)
+            {
+                <div class="sep"></div>
+                <div class="detail-grid">
+                    <div class="detail-item" style="grid-column: 1 / -1">
+                        <span class="label">Réservations dépendantes (@Reservation.Dependents.Count)</span>
+                        <span class="value">
+                            @foreach (var dep in Reservation.Dependents)
+                            {
+                                <div style="margin-bottom:4px">
+                                    <button class="btn-link" @onclick="() => NavigateToReservation(dep.Id)">
+                                        @dep.StudioName — @dep.TenantName (@dep.StartDate.ToString("dd/MM") - @dep.EndDate.ToString("dd/MM"))
+                                    </button>
+                                    <span class="badge @GetStatusBadgeClass(dep.Status)" style="margin-left:6px">@GetStatusLabel(dep.Status)</span>
+                                </div>
+                            }
+                        </span>
+                    </div>
+                </div>
+            }
+
             <div class="sep"></div>
 
             <div class="detail-grid">
                 <div class="detail-item">
                     <span class="label">Statut</span>
                     <span class="value">
-                        <span class="badge @GetStatusBadgeClass()">@GetStatusLabel()</span>
+                        <span class="badge @GetStatusBadgeClass(Reservation.Status)">@GetStatusLabel(Reservation.Status)</span>
                     </span>
                 </div>
                 @if (Reservation.EstimatedAmount.HasValue)
@@ -111,21 +147,32 @@
             @if (IsAuthenticated)
             {
                 <div class="sep"></div>
+
+                @if (Reservation.IsDependent)
+                {
+                    <div class="hint" style="margin-bottom:10px">
+                        Le statut de cette réservation suit automatiquement celui de la réservation parente.
+                    </div>
+                }
+
                 <div class="detail-actions">
                     <button class="btn" @onclick="() => OnEdit.InvokeAsync(Reservation)">Modifier</button>
 
-                    @if (Reservation.Status == ReservationStatus.Pending)
+                    @if (!Reservation.IsDependent)
                     {
-                        <button class="btn btn-accept" @onclick="AcceptReservation" disabled="@_processing">
-                            @(_processing ? "..." : "Accepter")
-                        </button>
-                    }
+                        @if (Reservation.Status == ReservationStatus.Pending)
+                        {
+                            <button class="btn btn-accept" @onclick="AcceptReservation" disabled="@_processing">
+                                @(_processing ? "..." : "Accepter")
+                            </button>
+                        }
 
-                    @if (Reservation.Status == ReservationStatus.Accepted)
-                    {
-                        <button class="btn btn-confirm" @onclick="ConfirmReservation" disabled="@_processing">
-                            @(_processing ? "..." : "Confirmer")
-                        </button>
+                        @if (Reservation.Status == ReservationStatus.Accepted)
+                        {
+                            <button class="btn btn-confirm" @onclick="ConfirmReservation" disabled="@_processing">
+                                @(_processing ? "..." : "Confirmer")
+                            </button>
+                        }
                     }
 
                     <button class="btn danger" @onclick="() => OnDelete.InvokeAsync(Reservation)">Supprimer</button>
@@ -143,12 +190,18 @@
     [Parameter] public EventCallback<ReservationDetailDto> OnEdit { get; set; }
     [Parameter] public EventCallback<ReservationDetailDto> OnDelete { get; set; }
     [Parameter] public EventCallback OnStatusChanged { get; set; }
+    [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
 
     [Inject] private IMediator Mediator { get; set; } = default!;
 
     private string? _errorMessage;
     private string? _successMessage;
     private bool _processing;
+
+    private async Task NavigateToReservation(Guid reservationId)
+    {
+        await OnReservationClicked.InvokeAsync(reservationId);
+    }
 
     private async Task AcceptReservation()
     {
@@ -216,7 +269,7 @@
         _ => ""
     };
 
-    private string GetStatusLabel() => Reservation.Status switch
+    private static string GetStatusLabel(ReservationStatus status) => status switch
     {
         ReservationStatus.Pending => "Demande",
         ReservationStatus.Accepted => "Acceptée",
@@ -224,7 +277,7 @@
         _ => ""
     };
 
-    private string GetStatusBadgeClass() => Reservation.Status switch
+    private static string GetStatusBadgeClass(ReservationStatus status) => status switch
     {
         ReservationStatus.Pending => "st-pending",
         ReservationStatus.Accepted => "st-accepted",

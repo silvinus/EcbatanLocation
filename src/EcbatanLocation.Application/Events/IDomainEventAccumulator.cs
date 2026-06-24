@@ -15,4 +15,10 @@ public interface IDomainEventAccumulator
 
     /// <summary>Returns the buffered events and empties the buffer.</summary>
     IReadOnlyList<IDomainEvent> Collect();
+
+    /// <summary>Stores events for best-effort dispatch after commit.</summary>
+    void StoreForBestEffort(IReadOnlyList<IDomainEvent> events);
+
+    /// <summary>Returns the events stored for best-effort dispatch and empties the store.</summary>
+    IReadOnlyList<IDomainEvent> CollectBestEffort();
 }

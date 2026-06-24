@@ -26,7 +26,29 @@ public class GetMonthlyPlanningQueryHandler(
         if (request.OwnerId.HasValue)
             filteredReservations = filteredReservations.Where(r => r.OwnerId == request.OwnerId.Value);
 
-        var reservationsByStudio = filteredReservations
+        var filteredList = filteredReservations.ToList();
+
+        var parentIds = filteredList
+            .Where(r => r.ParentReservationId.HasValue)
+            .Select(r => r.ParentReservationId!.Value)
+            .Distinct()
+            .ToList();
+
+        var groupMap = new Dictionary<Guid, int>();
+        var groupIndex = 0;
+        foreach (var pid in parentIds)
+            groupMap[pid] = groupIndex++;
+
+        int GetLinkGroup(Domain.Entities.Reservation r)
+        {
+            if (groupMap.TryGetValue(r.Id, out var idx))
+                return idx;
+            if (r.ParentReservationId.HasValue && groupMap.TryGetValue(r.ParentReservationId.Value, out var pidx))
+                return pidx;
+            return -1;
+        }
+
+        var reservationsByStudio = filteredList
             .GroupBy(r => r.StudioId)
             .ToDictionary(g => g.Key, g => g.ToList());
 
@@ -47,7 +69,9 @@ public class GetMonthlyPlanningQueryHandler(
                         r.Dates.StartDate,
                         r.Dates.EndDate,
                         r.Status,
-                        r.PersonLines.Select(pl => new PersonLineDto(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count)).ToList())).ToList()
+                        r.PersonLines.Select(pl => new PersonLineDto(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count)).ToList(),
+                        r.ParentReservationId,
+                        GetLinkGroup(r))).ToList()
                     : []))
             .ToList();
 

@@ -114,6 +114,9 @@ namespace EcbatanLocation.Infrastructure.Migrations.PostgreSQL.Migrations
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("ParentReservationId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -131,6 +134,8 @@ namespace EcbatanLocation.Infrastructure.Migrations.PostgreSQL.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentReservationId");
 
                     b.HasIndex("StudioId");
 
@@ -383,6 +388,11 @@ namespace EcbatanLocation.Infrastructure.Migrations.PostgreSQL.Migrations
 
             modelBuilder.Entity("EcbatanLocation.Domain.Entities.Reservation", b =>
                 {
+                    b.HasOne("EcbatanLocation.Domain.Entities.Reservation", null)
+                        .WithMany()
+                        .HasForeignKey("ParentReservationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.OwnsOne("EcbatanLocation.Domain.ValueObjects.DateRange", "Dates", b1 =>
                         {
                             b1.Property<Guid>("ReservationId")

@@ -58,6 +58,31 @@
                     <div class="field-hint warn">La date de départ doit être après la date d'arrivée.</div>
                 }
 
+                @if (_selectedStudio is not null && !_selectedStudio.RentableAlone)
+                {
+                    <div class="field">
+                        <label>Réservation parente</label>
+                        @if (_loadingParents)
+                        {
+                            <div class="hint">Recherche des réservations parentes…</div>
+                        }
+                        else if (_compatibleParents.Count == 0)
+                        {
+                            <div class="field-hint warn">Aucune réservation parente compatible. Créez d'abord une réservation sur un studio indépendant.</div>
+                        }
+                        else
+                        {
+                            <select value="@(_parentReservationId?.ToString() ?? "")" @onchange="OnParentChanged">
+                                <option value="">-- Choisir la réservation parente --</option>
+                                @foreach (var p in _compatibleParents)
+                                {
+                                    <option value="@p.Id">@p.StudioName — @p.TenantName (@p.StartDate.ToString("dd/MM") - @p.EndDate.ToString("dd/MM"), @GetStatusLabel(p.Status))</option>
+                                }
+                            </select>
+                        }
+                    </div>
+                }
+
                 <div class="field">
                     <label>Nom du locataire</label>
                     <input @bind="_tenantName" placeholder="Nom complet du locataire" />
@@ -157,6 +182,10 @@
     private StudioDto? _selectedStudio;
     private List<ClientType> _allowedClientTypes = [ClientType.Owner, ClientType.GuestWithPresence, ClientType.Acquaintance];
 
+    private Guid? _parentReservationId;
+    private List<ParentReservationOptionDto> _compatibleParents = [];
+    private bool _loadingParents;
+
     private int NightCount => _endDate.DayNumber - _startDate.DayNumber;
     private int TotalPersons => _personLines.Sum(l => l.AdultCount + l.ChildrenCount);
 
@@ -182,7 +211,17 @@
                 .ToList();
             _estimatedAmount = EditReservation.EstimatedAmount;
             _selectedStudio = Studios.FirstOrDefault(s => s.Id == EditReservation.Studio.Id);
+            _parentReservationId = EditReservation.ParentReservationId;
             UpdateAllowedClientTypes();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsEdit && _selectedStudio is not null && !_selectedStudio.RentableAlone)
+        {
+            await LoadCompatibleParents();
+            StateHasChanged();
         }
     }
 
@@ -232,8 +271,12 @@
         _selectedStudio = Guid.TryParse(_studioId, out var sid)
             ? Studios.FirstOrDefault(s => s.Id == sid)
             : null;
+        _parentReservationId = null;
+        _compatibleParents = [];
         UpdateAllowedClientTypes();
         await RefreshEstimateAndOverlap();
+        if (_selectedStudio is not null && !_selectedStudio.RentableAlone)
+            await LoadCompatibleParents();
     }
 
     private async Task OnStartDateChanged(ChangeEventArgs e)
@@ -241,6 +284,8 @@
         if (DateOnly.TryParse(e.Value?.ToString(), out var d))
             _startDate = d;
         await RefreshEstimateAndOverlap();
+        if (_selectedStudio is not null && !_selectedStudio.RentableAlone)
+            await LoadCompatibleParents();
     }
 
     private async Task OnEndDateChanged(ChangeEventArgs e)
@@ -248,6 +293,38 @@
         if (DateOnly.TryParse(e.Value?.ToString(), out var d))
             _endDate = d;
         await RefreshEstimateAndOverlap();
+        if (_selectedStudio is not null && !_selectedStudio.RentableAlone)
+            await LoadCompatibleParents();
+    }
+
+    private void OnParentChanged(ChangeEventArgs e)
+    {
+        _parentReservationId = Guid.TryParse(e.Value?.ToString(), out var pid) ? pid : null;
+    }
+
+    private async Task LoadCompatibleParents()
+    {
+        if (_startDate >= _endDate) return;
+
+        _loadingParents = true;
+        try
+        {
+            _compatibleParents = (await Mediator.Send(
+                new EcbatanLocation.Application.Queries.GetCompatibleParents.GetCompatibleParentsQuery(
+                    CurrentOwnerId, _startDate, _endDate,
+                    IsEdit ? EditReservation!.Id : null))).ToList();
+
+            if (_parentReservationId.HasValue && !_compatibleParents.Any(p => p.Id == _parentReservationId))
+                _parentReservationId = null;
+        }
+        catch
+        {
+            _compatibleParents = [];
+        }
+        finally
+        {
+            _loadingParents = false;
+        }
     }
 
     private async Task OnLineTypeChanged(int index, ChangeEventArgs e)
@@ -389,6 +466,12 @@
                 return;
             }
 
+            if (_selectedStudio is not null && !_selectedStudio.RentableAlone && _parentReservationId is null)
+            {
+                _errorMessage = "Veuillez sélectionner une réservation parente pour ce studio.";
+                return;
+            }
+
             var personLineDtos = _personLines
                 .Where(l => l.AdultCount > 0 || l.ChildrenCount > 0)
                 .Select(l => new PersonLineDto(l.ClientType, l.AdultCount, l.ChildrenCount))
@@ -398,13 +481,13 @@
             {
                 await Mediator.Send(new EcbatanLocation.Application.Commands.UpdateReservation.UpdateReservationCommand(
                     EditReservation!.Id, studioId, _startDate, _endDate,
-                    _tenantName.Trim(), personLineDtos));
+                    _tenantName.Trim(), personLineDtos, _parentReservationId));
             }
             else
             {
                 await Mediator.Send(new EcbatanLocation.Application.Commands.CreateReservation.CreateReservationCommand(
                     studioId, CurrentOwnerId, _startDate, _endDate,
-                    _tenantName.Trim(), personLineDtos));
+                    _tenantName.Trim(), personLineDtos, _parentReservationId));
             }
 
             await OnSaved.InvokeAsync();
@@ -438,6 +521,14 @@
         ClientType.Acquaintance => "Connaissance",
         ClientType.MobileHome => "Mobil-home",
         ClientType.Tent => "Tente",
+        _ => ""
+    };
+
+    private static string GetStatusLabel(ReservationStatus status) => status switch
+    {
+        ReservationStatus.Pending => "Demande",
+        ReservationStatus.Accepted => "Acceptée",
+        ReservationStatus.Confirmed => "Confirmée",
         _ => ""
     };
 }

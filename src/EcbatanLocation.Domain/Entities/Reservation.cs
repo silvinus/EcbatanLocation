@@ -19,6 +19,8 @@ public class Reservation : IHasDomainEvents
     public DateTime? AcceptedAt { get; private set; }
     public string? ConfirmedBy { get; private set; }
     public DateTime? ConfirmedAt { get; private set; }
+    public Guid? ParentReservationId { get; private set; }
+    public bool HasParent => ParentReservationId.HasValue;
     public DateTime CreatedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
 
@@ -82,9 +84,10 @@ public class Reservation : IHasDomainEvents
         _domainEvents.Add(new ReservationConfirmed(Id, by));
     }
 
-    /// <summary>Records the deletion event. Call before removing the reservation from its repository.</summary>
     public void MarkDeleted()
     {
+        Status = ReservationStatus.Deleted;
+        UpdatedAt = DateTime.UtcNow;
         _domainEvents.Add(new ReservationDeleted(Id));
     }
 
@@ -100,6 +103,33 @@ public class Reservation : IHasDomainEvents
         Dates = dates;
         TenantName = tenantName;
         _personLines = lines;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void SetParentReservation(Guid parentId)
+    {
+        ParentReservationId = parentId;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void ClearParentReservation()
+    {
+        ParentReservationId = null;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    public void InheritStatus(
+        ReservationStatus status,
+        string? acceptedBy,
+        DateTime? acceptedAt,
+        string? confirmedBy,
+        DateTime? confirmedAt)
+    {
+        Status = status;
+        AcceptedBy = acceptedBy;
+        AcceptedAt = acceptedAt;
+        ConfirmedBy = confirmedBy;
+        ConfirmedAt = confirmedAt;
         UpdatedAt = DateTime.UtcNow;
     }
 

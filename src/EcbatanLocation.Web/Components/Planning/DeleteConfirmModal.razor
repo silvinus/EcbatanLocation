@@ -17,6 +17,20 @@
                 du @Reservation.StartDate.ToString("dd/MM/yyyy") au @Reservation.EndDate.ToString("dd/MM/yyyy")
                 (@Reservation.Studio.Name) ?
             </p>
+
+            @if (Reservation.Dependents is not null && Reservation.Dependents.Count > 0)
+            {
+                <div class="alert-error" style="margin-bottom:14px">
+                    ⚠ Attention : Cette réservation a @Reservation.Dependents.Count réservation(s) dépendante(s) qui seront également supprimées :
+                    <ul style="margin:8px 0 0;padding-left:20px">
+                        @foreach (var dep in Reservation.Dependents)
+                        {
+                            <li>@dep.StudioName — @dep.TenantName (@dep.StartDate.ToString("dd/MM") - @dep.EndDate.ToString("dd/MM"))</li>
+                        }
+                    </ul>
+                </div>
+            }
+
             <p class="hint">Cette action est irréversible.</p>
 
             <div class="modal-actions">

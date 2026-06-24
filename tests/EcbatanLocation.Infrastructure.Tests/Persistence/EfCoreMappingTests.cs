@@ -142,5 +142,102 @@ public class EfCoreMappingTests : IDisposable
         }
     }
 
+    [Fact]
+    public async Task ParentReservationId_NullByDefault()
+    {
+        var studio = Studio.Create("Villa", 6, true, true, 1);
+        var owner = Owner.Create("Léa", "u1");
+        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var lines = new[] { new PersonLine(ClientType.Owner, 2, 0) };
+        var reservation = Reservation.Create(studio.Id, owner.Id, dates, "Test", lines, 6);
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            ctx.Studios.Add(studio);
+            ctx.Owners.Add(owner);
+            ctx.Reservations.Add(reservation);
+            await ctx.SaveChangesAsync();
+        }
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            var loaded = await ctx.Reservations.FirstAsync();
+            Assert.Null(loaded.ParentReservationId);
+        }
+    }
+
+    [Fact]
+    public async Task ParentReservationId_PersistsLink()
+    {
+        var studio = Studio.Create("Villa", 6, true, true, 1);
+        var dependentStudio = Studio.Create("Centre", 2, false, false, 2);
+        var owner = Owner.Create("Léa", "u1");
+        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var parent = Reservation.Create(studio.Id, owner.Id, dates, "Parent",
+            new[] { new PersonLine(ClientType.Owner, 2, 0) }, 6);
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            ctx.Studios.Add(studio);
+            ctx.Studios.Add(dependentStudio);
+            ctx.Owners.Add(owner);
+            ctx.Reservations.Add(parent);
+            await ctx.SaveChangesAsync();
+        }
+
+        var child = Reservation.Create(dependentStudio.Id, owner.Id, dates, "Child",
+            new[] { new PersonLine(ClientType.Owner, 1, 0) }, 2);
+        child.SetParentReservation(parent.Id);
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            ctx.Reservations.Add(child);
+            await ctx.SaveChangesAsync();
+        }
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            var loaded = await ctx.Reservations.FirstAsync(r => r.TenantName == "Child");
+            Assert.Equal(parent.Id, loaded.ParentReservationId);
+        }
+    }
+
+    [Fact]
+    public async Task ParentReservationId_RestrictDelete_BlocksDeletingParentWithChild()
+    {
+        var studio = Studio.Create("Villa", 6, true, true, 1);
+        var dependentStudio = Studio.Create("Centre", 2, false, false, 2);
+        var owner = Owner.Create("Léa", "u1");
+        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var parent = Reservation.Create(studio.Id, owner.Id, dates, "Parent",
+            new[] { new PersonLine(ClientType.Owner, 2, 0) }, 6);
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            ctx.Studios.Add(studio);
+            ctx.Studios.Add(dependentStudio);
+            ctx.Owners.Add(owner);
+            ctx.Reservations.Add(parent);
+            await ctx.SaveChangesAsync();
+        }
+
+        var child = Reservation.Create(dependentStudio.Id, owner.Id, dates, "Child",
+            new[] { new PersonLine(ClientType.Owner, 1, 0) }, 2);
+        child.SetParentReservation(parent.Id);
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            ctx.Reservations.Add(child);
+            await ctx.SaveChangesAsync();
+        }
+
+        await using (var ctx = _factory.CreateContext())
+        {
+            var loadedParent = await ctx.Reservations.FirstAsync(r => r.TenantName == "Parent");
+            ctx.Reservations.Remove(loadedParent);
+            await Assert.ThrowsAsync<DbUpdateException>(() => ctx.SaveChangesAsync());
+        }
+    }
+
     public void Dispose() => _factory.Dispose();
 }

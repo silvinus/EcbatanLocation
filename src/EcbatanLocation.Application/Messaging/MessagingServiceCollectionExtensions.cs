@@ -21,7 +21,9 @@ public static class MessagingServiceCollectionExtensions
             foreach (var contract in type.GetInterfaces().Where(i => i.IsGenericType))
             {
                 var definition = contract.GetGenericTypeDefinition();
-                if (definition == typeof(IRequestHandler<,>) || definition == typeof(INotificationHandler<>))
+                if (definition == typeof(IRequestHandler<,>)
+                    || definition == typeof(INotificationHandler<>)
+                    || definition == typeof(ICriticalNotificationConsumer<>))
                     services.AddTransient(contract, type);
             }
         }

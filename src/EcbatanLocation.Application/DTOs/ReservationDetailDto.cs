@@ -18,4 +18,11 @@ public record ReservationDetailDto(
     DateTime? ConfirmedAt,
     DateTime CreatedAt,
     DateTime? UpdatedAt,
-    decimal? EstimatedAmount);
+    decimal? EstimatedAmount,
+    Guid? ParentReservationId = null,
+    string? ParentStudioName = null,
+    string? ParentTenantName = null,
+    IReadOnlyList<DependentReservationSummaryDto>? Dependents = null)
+{
+    public bool IsDependent => ParentReservationId.HasValue;
+}

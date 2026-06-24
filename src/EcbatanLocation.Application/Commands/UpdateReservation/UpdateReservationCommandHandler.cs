@@ -27,15 +27,33 @@ public class UpdateReservationCommandHandler(
             request.StudioId, dates, request.ReservationId, cancellationToken);
         domainService.ValidateNoOverlap(overlapExists);
 
+        var hasDependents = await reservationRepository.HasDependentsAsync(reservation.Id, cancellationToken);
+        if (hasDependents && (dates.StartDate != reservation.Dates.StartDate || dates.EndDate != reservation.Dates.EndDate))
+            throw new InvalidOperationException(
+                "Cannot change dates: this reservation has dependent reservations.");
+
         if (!studio.RentableAlone)
         {
-            var ownerReservations = await reservationRepository.GetByOwnerAndOverlappingDatesAsync(
-                reservation.OwnerId, dates, cancellationToken);
-            domainService.ValidateStudioDependency(studio, reservation.OwnerId, dates, ownerReservations);
+            if (request.ParentReservationId is null)
+                throw new InvalidOperationException(
+                    $"Studio '{studio.Name}' is not rentable alone. A parent reservation must be specified.");
+
+            var parent = await reservationRepository.GetByIdAsync(request.ParentReservationId.Value, cancellationToken)
+                         ?? throw new InvalidOperationException("Parent reservation not found.");
+
+            var parentStudio = await studioRepository.GetByIdAsync(parent.StudioId, cancellationToken)
+                               ?? throw new InvalidOperationException("Parent studio not found.");
+
+            domainService.ValidateParentLink(studio, parent, parentStudio, dates, reservation.OwnerId);
+            reservation.SetParentReservation(parent.Id);
+        }
+        else
+        {
+            reservation.ClearParentReservation();
         }
 
         var personLines = request.PersonLines
-            .Select(pl => new PersonLine(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count))
+            .Select(pl => new Domain.ValueObjects.PersonLine(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count))
             .ToList();
 
         reservation.Update(

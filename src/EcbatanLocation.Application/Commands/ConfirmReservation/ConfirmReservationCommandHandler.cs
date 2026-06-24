@@ -11,8 +11,11 @@ public class ConfirmReservationCommandHandler(
         var reservation = await reservationRepository.GetByIdAsync(request.ReservationId, cancellationToken)
                           ?? throw new InvalidOperationException($"Reservation '{request.ReservationId}' not found.");
 
-        reservation.Confirm(request.ConfirmedBy);
+        if (reservation.HasParent)
+            throw new InvalidOperationException(
+                "Dependent reservations cannot be confirmed independently. Confirm the parent reservation instead.");
 
+        reservation.Confirm(request.ConfirmedBy);
         await reservationRepository.UpdateAsync(reservation, cancellationToken);
     }
 }

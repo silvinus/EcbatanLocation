@@ -25,11 +25,20 @@ public class CreateReservationCommandHandler(
             request.StudioId, dates, null, cancellationToken);
         domainService.ValidateNoOverlap(overlapExists);
 
+        Reservation? parent = null;
         if (!studio.RentableAlone)
         {
-            var ownerReservations = await reservationRepository.GetByOwnerAndOverlappingDatesAsync(
-                request.OwnerId, dates, cancellationToken);
-            domainService.ValidateStudioDependency(studio, request.OwnerId, dates, ownerReservations);
+            if (request.ParentReservationId is null)
+                throw new InvalidOperationException(
+                    $"Studio '{studio.Name}' is not rentable alone. A parent reservation must be specified.");
+
+            parent = await reservationRepository.GetByIdAsync(request.ParentReservationId.Value, cancellationToken)
+                     ?? throw new InvalidOperationException("Parent reservation not found.");
+
+            var parentStudio = await studioRepository.GetByIdAsync(parent.StudioId, cancellationToken)
+                               ?? throw new InvalidOperationException("Parent studio not found.");
+
+            domainService.ValidateParentLink(studio, parent, parentStudio, dates, request.OwnerId);
         }
 
         var personLines = request.PersonLines
@@ -43,6 +52,17 @@ public class CreateReservationCommandHandler(
             request.TenantName,
             personLines,
             studio.Capacity);
+
+        if (parent is not null)
+        {
+            reservation.SetParentReservation(parent.Id);
+            reservation.InheritStatus(
+                parent.Status,
+                parent.AcceptedBy,
+                parent.AcceptedAt,
+                parent.ConfirmedBy,
+                parent.ConfirmedAt);
+        }
 
         await reservationRepository.AddAsync(reservation, cancellationToken);
 

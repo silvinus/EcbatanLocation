@@ -109,6 +109,9 @@ namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ParentReservationId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -126,6 +129,8 @@ namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ParentReservationId");
 
                     b.HasIndex("StudioId");
 
@@ -374,6 +379,11 @@ namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
 
             modelBuilder.Entity("EcbatanLocation.Domain.Entities.Reservation", b =>
                 {
+                    b.HasOne("EcbatanLocation.Domain.Entities.Reservation", null)
+                        .WithMany()
+                        .HasForeignKey("ParentReservationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.OwnsOne("EcbatanLocation.Domain.ValueObjects.DateRange", "Dates", b1 =>
                         {
                             b1.Property<Guid>("ReservationId")

@@ -6,16 +6,16 @@ using EcbatanLocation.Application.Events;
 namespace EcbatanLocation.Application.Messaging;
 
 /// <summary>
-/// Minimal in-process mediator. Resolves pipeline behaviors from the caller's scope
-/// (to preserve Blazor circuit services like AuthenticationStateProvider), but executes
-/// the handler in a fresh child scope so that scoped services (DbContext) are isolated
+/// Minimal in-process mediator with two-phase domain event dispatch. Resolves pipeline behaviors
+/// from the caller's scope (to preserve Blazor circuit services like AuthenticationStateProvider),
+/// but executes the handler in a fresh child scope so that scoped services (DbContext) are isolated
 /// per operation — required for Blazor Server where the circuit scope is long-lived.
 ///
-/// Domain events raised during the handler are buffered by the persistence interceptor in the
-/// scoped <see cref="IDomainEventAccumulator"/> and dispatched here <b>after</b> the handler
-/// returns — i.e. post-commit. They are best-effort side effects: they fire only when the
-/// operation succeeds, run outside its write transaction, and a failing handler is logged but
-/// never bubbles up to fail an already-committed operation.
+/// Domain events raised during the handler are dispatched in two phases:
+/// 1. <b>Critical</b> handlers (<see cref="ICriticalNotificationConsumer{T}"/>) run inside the
+///    same UoW transaction — a failure rolls back the entire operation.
+/// 2. <b>Best-effort</b> handlers (<see cref="INotificationHandler{T}"/>) run after commit;
+///    failures are logged but never bubble up.
 /// </summary>
 public sealed class Mediator(IServiceProvider provider, IServiceScopeFactory scopeFactory) : IMediator
 {
@@ -62,45 +62,87 @@ public sealed class Mediator(IServiceProvider provider, IServiceScopeFactory sco
     {
         using var scope = scopeFactory.CreateScope();
         var scopedProvider = scope.ServiceProvider;
+        var unitOfWork = scopedProvider.GetRequiredService<IUnitOfWork>();
 
-        var requestType = request.GetType();
-        var handlerType = typeof(IRequestHandler<,>).MakeGenericType(requestType, typeof(TResponse));
-        var handler = scopedProvider.GetRequiredService(handlerType);
-        var handleMethod = handlerType.GetMethod("Handle")!;
+        await unitOfWork.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var requestType = request.GetType();
+            var handlerType = typeof(IRequestHandler<,>).MakeGenericType(requestType, typeof(TResponse));
+            var handler = scopedProvider.GetRequiredService(handlerType);
+            var handleMethod = handlerType.GetMethod("Handle")!;
 
-        var response = await (Task<TResponse>)handleMethod.Invoke(handler, [request, cancellationToken])!;
+            var response = await (Task<TResponse>)handleMethod.Invoke(handler, [request, cancellationToken])!;
 
-        // The handler (and its repository transaction) committed successfully. Drain the events
-        // buffered during persistence and dispatch them now — post-commit, in this same scope.
-        await DispatchDomainEventsAsync(scopedProvider, cancellationToken);
+            await DispatchCriticalEventsAsync(scopedProvider, cancellationToken);
 
-        return response;
+            await unitOfWork.CommitAsync(cancellationToken);
+
+            await DispatchBestEffortEventsAsync(scopedProvider, cancellationToken);
+
+            return response;
+        }
+        catch
+        {
+            await unitOfWork.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
-    private static async Task DispatchDomainEventsAsync(IServiceProvider scopedProvider, CancellationToken cancellationToken)
+    private static async Task DispatchCriticalEventsAsync(IServiceProvider sp, CancellationToken ct)
     {
-        var domainEvents = scopedProvider.GetRequiredService<IDomainEventAccumulator>().Collect();
-        if (domainEvents.Count == 0)
-            return;
+        var accumulator = sp.GetRequiredService<IDomainEventAccumulator>();
+        var events = accumulator.Collect();
+        if (events.Count == 0) return;
 
-        var logger = scopedProvider.GetService<ILogger<Mediator>>();
+        accumulator.StoreForBestEffort(events);
 
-        foreach (var domainEvent in domainEvents)
+        foreach (var domainEvent in events)
         {
             var notificationType = typeof(DomainEventNotification<>).MakeGenericType(domainEvent.GetType());
             var notification = (INotification)Activator.CreateInstance(notificationType, domainEvent)!;
-            var handlerType = typeof(INotificationHandler<>).MakeGenericType(notificationType);
+
+            var handlerType = typeof(ICriticalNotificationConsumer<>).MakeGenericType(notificationType);
             var handleMethod = handlerType.GetMethod("Handle")!;
 
-            foreach (var handler in scopedProvider.GetServices(handlerType))
+            foreach (var handler in sp.GetServices(handlerType))
             {
                 try
                 {
-                    await (Task)handleMethod.Invoke(handler!, [notification, cancellationToken])!;
+                    await (Task)handleMethod.Invoke(handler!, [notification, ct])!;
+                }
+                catch (TargetInvocationException ex) when (ex.InnerException is not null)
+                {
+                    throw ex.InnerException;
+                }
+            }
+        }
+    }
+
+    private static async Task DispatchBestEffortEventsAsync(IServiceProvider sp, CancellationToken ct)
+    {
+        var accumulator = sp.GetRequiredService<IDomainEventAccumulator>();
+        var events = accumulator.CollectBestEffort();
+        if (events.Count == 0) return;
+
+        var logger = sp.GetService<ILogger<Mediator>>();
+
+        foreach (var domainEvent in events)
+        {
+            var notificationType = typeof(DomainEventNotification<>).MakeGenericType(domainEvent.GetType());
+            var notification = (INotification)Activator.CreateInstance(notificationType, domainEvent)!;
+
+            var handlerType = typeof(INotificationHandler<>).MakeGenericType(notificationType);
+            var handleMethod = handlerType.GetMethod("Handle")!;
+
+            foreach (var handler in sp.GetServices(handlerType))
+            {
+                try
+                {
+                    await (Task)handleMethod.Invoke(handler!, [notification, ct])!;
                 }
                 catch (Exception ex)
                 {
-                    // Best-effort: a failed post-commit reaction must not fail the committed operation.
                     var cause = (ex as TargetInvocationException)?.InnerException ?? ex;
                     logger?.LogWarning(cause, "Domain event handler {Handler} failed for {DomainEvent}.",
                         handler!.GetType().Name, domainEvent.GetType().Name);

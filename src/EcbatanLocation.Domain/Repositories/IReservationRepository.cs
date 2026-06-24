@@ -18,4 +18,9 @@ public interface IReservationRepository
     Task<bool> ExistsByStudioAsync(Guid studioId, CancellationToken ct = default);
     Task<IReadOnlySet<Guid>> GetStudioIdsWithReservationsAsync(CancellationToken ct = default);
     Task<IReadOnlyList<Reservation>> GetByYearAsync(int year, CancellationToken ct = default);
+    Task<IReadOnlyList<Reservation>> GetDependentsByParentIdAsync(Guid parentId, CancellationToken ct = default);
+    Task<bool> HasDependentsAsync(Guid reservationId, CancellationToken ct = default);
+    Task<IReadOnlyList<Reservation>> GetCompatibleParentsAsync(Guid ownerId, DateRange dates, Guid? excludeId = null, CancellationToken ct = default);
+    Task DeleteRangeAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
+    Task UpdateRangeAsync(IReadOnlyList<Reservation> reservations, CancellationToken ct = default);
 }
