@@ -3,13 +3,20 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using EcbatanLocation.Application.DTOs;
 using EcbatanLocation.Domain.Enums;
+using EcbatanLocation.Web.Services;
 
 namespace EcbatanLocation.Web.Components.Pages;
 
-public partial class Home
+public partial class Home : IDisposable
 {
     [CascadingParameter]
     private Task<AuthenticationState>? AuthState { get; set; }
+
+    // Injected directly (not cascaded): the layout renders as static SSR, so a
+    // cascaded service would neither cross the interactivity boundary nor share
+    // this circuit's DI scope. Injecting here binds to the circuit-scoped instance.
+    [Inject]
+    private ViewportService Viewport { get; set; } = default!;
 
     private int Year { get; set; }
     private int Month { get; set; }
@@ -37,6 +44,7 @@ public partial class Home
     private bool _loading;
     private ViewMode _viewMode = ViewMode.Month;
     private DateOnly _weekStart;
+    private bool _viewExplicitlyChosen;
 
     private bool _showFilters;
     private bool _showHelp;
@@ -46,7 +54,9 @@ public partial class Home
         + (SelectedStatus is not null ? 1 : 0)
         + (SelectedOwnerId is not null ? 1 : 0);
 
-    private enum ViewMode { Month, Week, List }
+    private enum ViewMode { Month, Week, List, Agenda }
+
+    private bool IsMobile => Viewport.IsMobile;
 
     private void ToggleFilters()
     {
@@ -77,6 +87,37 @@ public partial class Home
         await ResolveCurrentOwner();
         await LoadPlanning();
         await LoadOccupation();
+
+        Viewport.OnChange += OnViewportChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await Viewport.InitializeAsync();
+    }
+
+    // The viewport service initializes after the first interactive render, so the
+    // mobile default is applied here rather than in OnInitializedAsync.
+    private void OnViewportChanged()
+    {
+        if (!_viewExplicitlyChosen)
+            _viewMode = IsMobile ? ViewMode.Agenda : ViewMode.Month;
+        StateHasChanged();
+    }
+
+    private void SelectView(ViewMode mode)
+    {
+        _viewExplicitlyChosen = true;
+        if (mode == ViewMode.Week)
+            SwitchToWeekView();
+        else
+            _viewMode = mode;
+    }
+
+    public void Dispose()
+    {
+        Viewport.OnChange -= OnViewportChanged;
     }
 
     private async Task ResolveCurrentOwner()

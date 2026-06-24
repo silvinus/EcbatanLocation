@@ -21,9 +21,13 @@
                     }
                 </button>
                 <div class="chips">
-                    <button class="chip @(_viewMode == ViewMode.Month ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.Month)" @onclick='() => _viewMode = ViewMode.Month'>Mois</button>
-                    <button class="chip @(_viewMode == ViewMode.Week ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.Week)" @onclick="SwitchToWeekView">Semaine</button>
-                    <button class="chip @(_viewMode == ViewMode.List ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.List)" @onclick='() => _viewMode = ViewMode.List'>Liste</button>
+                    @if (IsMobile)
+                    {
+                        <button class="chip @(_viewMode == ViewMode.Agenda ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.Agenda)" @onclick="() => SelectView(ViewMode.Agenda)">Agenda</button>
+                    }
+                    <button class="chip @(_viewMode == ViewMode.Month ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.Month)" @onclick="() => SelectView(ViewMode.Month)">Mois</button>
+                    <button class="chip @(_viewMode == ViewMode.Week ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.Week)" @onclick="() => SelectView(ViewMode.Week)">Semaine</button>
+                    <button class="chip @(_viewMode == ViewMode.List ? "active" : "muted")" aria-pressed="@(_viewMode == ViewMode.List)" @onclick="() => SelectView(ViewMode.List)">Liste</button>
                 </div>
                 <div class="help-wrap">
                     <button class="btn-help @(_showHelp ? "active" : null)" @onclick="ToggleHelp" aria-label="Aide et légende" title="Aide et légende">?</button>
@@ -81,6 +85,11 @@
                 {
                     <PlanningListView Planning="@_planning"
                                       OnReservationClicked="OnReservationClicked" />
+                }
+                else if (_viewMode == ViewMode.Agenda)
+                {
+                    <PlanningMobileAgenda Planning="@_planning"
+                                          OnReservationClicked="OnReservationClicked" />
                 }
             }
         </div>
