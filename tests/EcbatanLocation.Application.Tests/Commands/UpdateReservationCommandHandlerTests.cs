@@ -81,4 +81,54 @@ public class UpdateReservationCommandHandlerTests(IntegrationTestFixture fixture
 
         await Assert.ThrowsAsync<OverlappingReservationException>(() => Mediator.Send(cmd));
     }
+
+    [Fact]
+    public async Task Handle_DateChangeWithDependents_Throws()
+    {
+        var villa = await GetStudioAsync("Villa");
+        var centre = await GetStudioAsync("Studio Centre");
+        var owner = await GetOwnerAsync("Léa");
+
+        var parentId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id,
+            new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10),
+            "Dupont", [new PersonLineDto(ClientType.Owner, 1, 0)]));
+
+        await Mediator.Send(new CreateReservationCommand(centre.Id, owner.Id,
+            new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 6),
+            "Dupont", [new PersonLineDto(ClientType.Owner, 2, 0)],
+            ParentReservationId: parentId));
+
+        var cmd = new UpdateReservationCommand(parentId, villa.Id,
+            new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 10), "Dupont",
+            [new PersonLineDto(ClientType.Owner, 1, 0)]);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Mediator.Send(cmd));
+        Assert.Contains("dependent", ex.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Handle_SameDatesWithDependents_Succeeds()
+    {
+        var villa = await GetStudioAsync("Villa");
+        var centre = await GetStudioAsync("Studio Centre");
+        var owner = await GetOwnerAsync("Léa");
+
+        var parentId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id,
+            new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10),
+            "Dupont", [new PersonLineDto(ClientType.Owner, 1, 0)]));
+
+        await Mediator.Send(new CreateReservationCommand(centre.Id, owner.Id,
+            new DateOnly(2026, 7, 2), new DateOnly(2026, 7, 6),
+            "Dupont", [new PersonLineDto(ClientType.Owner, 2, 0)],
+            ParentReservationId: parentId));
+
+        await Mediator.Send(new UpdateReservationCommand(parentId, villa.Id,
+            new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10), "Martin",
+            [new PersonLineDto(ClientType.Owner, 2, 0)]));
+
+        var repo = Services.GetRequiredService<IReservationRepository>();
+        var parent = await repo.GetByIdAsync(parentId);
+        Assert.NotNull(parent);
+        Assert.Equal("Martin", parent.TenantName);
+    }
 }

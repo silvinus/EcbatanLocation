@@ -10,4 +10,6 @@ public record ReservationPlanningDto(
     DateOnly StartDate,
     DateOnly EndDate,
     ReservationStatus Status,
-    IReadOnlyList<PersonLineDto> PersonLines);
+    IReadOnlyList<PersonLineDto> PersonLines,
+    Guid? ParentReservationId = null,
+    int LinkGroupIndex = -1);

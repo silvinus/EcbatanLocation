@@ -8,11 +8,20 @@
         <span>@Reservation.PersonLines.Sum(l => l.ChildrenUnder3Count) &lt;3a</span>
         <span class="badge">@GetStatusLabel()</span>
     </div>
+    @if (Reservation.LinkGroupIndex >= 0)
+    {
+        <span class="link-dot" style="background:@LinkColors[Reservation.LinkGroupIndex % LinkColors.Length]"></span>
+    }
 </div>
 
 @code {
     [Parameter, EditorRequired] public ReservationPlanningDto Reservation { get; set; } = default!;
     [Parameter] public EventCallback OnClick { get; set; }
+
+    private static readonly string[] LinkColors = [
+        "#e74c3c", "#3498db", "#2ecc71", "#f39c12",
+        "#9b59b6", "#1abc9c", "#e67e22", "#34495e"
+    ];
 
     private async Task OnKeyDown(KeyboardEventArgs e)
     {

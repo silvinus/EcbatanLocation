@@ -37,6 +37,33 @@ public class GetReservationDetailQueryHandler(
             .Select(pl => new PersonLineDto(pl.ClientType, pl.AdultCount, pl.ChildrenUnder3Count))
             .ToList();
 
+        string? parentStudioName = null;
+        string? parentTenantName = null;
+        if (reservation.ParentReservationId is not null)
+        {
+            var parent = await reservationRepository.GetByIdAsync(reservation.ParentReservationId.Value, cancellationToken);
+            if (parent is not null)
+            {
+                var parentStudio = await studioRepository.GetByIdAsync(parent.StudioId, cancellationToken);
+                parentStudioName = parentStudio?.Name ?? "Unknown";
+                parentTenantName = parent.TenantName;
+            }
+        }
+
+        var dependents = await reservationRepository.GetDependentsByParentIdAsync(reservation.Id, cancellationToken);
+        var studios = await studioRepository.GetAllAsync(cancellationToken);
+        var studioLookup = studios.ToDictionary(s => s.Id, s => s.Name);
+
+        var dependentDtos = dependents
+            .Select(d => new DependentReservationSummaryDto(
+                d.Id,
+                studioLookup.GetValueOrDefault(d.StudioId, "Unknown"),
+                d.TenantName,
+                d.Dates.StartDate,
+                d.Dates.EndDate,
+                d.Status))
+            .ToList();
+
         return new ReservationDetailDto(
             reservation.Id,
             studio is not null
@@ -57,6 +84,10 @@ public class GetReservationDetailQueryHandler(
             reservation.ConfirmedAt,
             reservation.CreatedAt,
             reservation.UpdatedAt,
-            estimatedAmount);
+            estimatedAmount,
+            reservation.ParentReservationId,
+            parentStudioName,
+            parentTenantName,
+            dependentDtos);
     }
 }

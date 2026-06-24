@@ -23,128 +23,156 @@ public class ReservationDomainServiceTests
             "Dupont", lines, 6);
     }
 
-    // --- ValidateStudioDependency (H1) ---
+    // --- ValidateParentLink ---
 
     [Fact]
-    public void ValidateStudioDependency_RentableAlone_Passes()
+    public void ValidateParentLink_ValidLink_Passes()
     {
-        var studio = CreateStudio(rentableAlone: true);
-        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
-
-        _service.ValidateStudioDependency(studio, Guid.NewGuid(), dates, []);
-    }
-
-    [Fact]
-    public void ValidateStudioDependency_NotRentableAlone_NoIndependentReservation_Throws()
-    {
-        var studio = CreateStudio(rentableAlone: false, name: "Studio Centre");
-        var ownerId = Guid.NewGuid();
-        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
-
-        Assert.Throws<InvalidOperationException>(() =>
-            _service.ValidateStudioDependency(studio, ownerId, dates, []));
-    }
-
-    [Fact]
-    public void ValidateStudioDependency_NotRentableAlone_ContainedByIndependentReservation_Passes()
-    {
-        var independentStudio = CreateStudio(rentableAlone: true, name: "Villa");
+        var parentStudio = CreateStudio(rentableAlone: true, name: "Villa");
         var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
         var ownerId = Guid.NewGuid();
-        var dates = new DateRange(new DateOnly(2026, 7, 3), new DateOnly(2026, 7, 8));
-        var independentDates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
+        var parentDates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
+        var dependentDates = new DateRange(new DateOnly(2026, 7, 3), new DateOnly(2026, 7, 8));
+        var parent = CreateReservation(parentStudio.Id, ownerId, parentDates);
 
-        var existingReservation = CreateReservation(independentStudio.Id, ownerId, independentDates);
-
-        _service.ValidateStudioDependency(dependentStudio, ownerId, dates, [existingReservation]);
+        _service.ValidateParentLink(dependentStudio, parent, parentStudio, dependentDates, ownerId);
     }
 
     [Fact]
-    public void ValidateStudioDependency_NotRentableAlone_IdenticalDates_Passes()
+    public void ValidateParentLink_IdenticalDates_Passes()
     {
-        var independentStudio = CreateStudio(rentableAlone: true, name: "Villa");
+        var parentStudio = CreateStudio(rentableAlone: true, name: "Villa");
         var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
         var ownerId = Guid.NewGuid();
         var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var parent = CreateReservation(parentStudio.Id, ownerId, dates);
 
-        var existingReservation = CreateReservation(independentStudio.Id, ownerId, dates);
-
-        _service.ValidateStudioDependency(dependentStudio, ownerId, dates, [existingReservation]);
+        _service.ValidateParentLink(dependentStudio, parent, parentStudio, dates, ownerId);
     }
 
     [Fact]
-    public void ValidateStudioDependency_NotRentableAlone_OverflowsAtStart_Throws()
+    public void ValidateParentLink_DependentIsRentableAlone_Throws()
     {
-        var independentStudio = CreateStudio(rentableAlone: true, name: "Villa");
-        var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
+        var parentStudio = CreateStudio(rentableAlone: true, name: "Villa");
+        var dependentStudio = CreateStudio(rentableAlone: true, name: "Studio Est");
         var ownerId = Guid.NewGuid();
         var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
-        var independentDates = new DateRange(new DateOnly(2026, 7, 3), new DateOnly(2026, 7, 10));
-
-        var existingReservation = CreateReservation(independentStudio.Id, ownerId, independentDates);
+        var parent = CreateReservation(parentStudio.Id, ownerId, dates);
 
         Assert.Throws<InvalidOperationException>(() =>
-            _service.ValidateStudioDependency(dependentStudio, ownerId, dates, [existingReservation]));
+            _service.ValidateParentLink(dependentStudio, parent, parentStudio, dates, ownerId));
     }
 
     [Fact]
-    public void ValidateStudioDependency_NotRentableAlone_OverflowsAtEnd_Throws()
+    public void ValidateParentLink_ParentNotRentableAlone_Throws()
     {
-        var independentStudio = CreateStudio(rentableAlone: true, name: "Villa");
-        var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
+        var parentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
+        var dependentStudio = CreateStudio(rentableAlone: false, name: "Mobil-home");
         var ownerId = Guid.NewGuid();
-        var dates = new DateRange(new DateOnly(2026, 7, 5), new DateOnly(2026, 7, 15));
-        var independentDates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
-
-        var existingReservation = CreateReservation(independentStudio.Id, ownerId, independentDates);
+        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var parent = CreateReservation(parentStudio.Id, ownerId, dates);
 
         Assert.Throws<InvalidOperationException>(() =>
-            _service.ValidateStudioDependency(dependentStudio, ownerId, dates, [existingReservation]));
+            _service.ValidateParentLink(dependentStudio, parent, parentStudio, dates, ownerId));
     }
 
     [Fact]
-    public void ValidateStudioDependency_NotRentableAlone_OverflowsBothSides_Throws()
+    public void ValidateParentLink_DifferentOwner_Throws()
     {
-        var independentStudio = CreateStudio(rentableAlone: true, name: "Villa");
-        var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
-        var ownerId = Guid.NewGuid();
-        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 15));
-        var independentDates = new DateRange(new DateOnly(2026, 7, 3), new DateOnly(2026, 7, 10));
-
-        var existingReservation = CreateReservation(independentStudio.Id, ownerId, independentDates);
-
-        Assert.Throws<InvalidOperationException>(() =>
-            _service.ValidateStudioDependency(dependentStudio, ownerId, dates, [existingReservation]));
-    }
-
-    [Fact]
-    public void ValidateStudioDependency_NotRentableAlone_NonOverlappingReservation_Throws()
-    {
-        var independentStudio = CreateStudio(rentableAlone: true, name: "Villa");
-        var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
-        var ownerId = Guid.NewGuid();
-        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 5));
-        var independentDates = new DateRange(new DateOnly(2026, 7, 10), new DateOnly(2026, 7, 15));
-
-        var existingReservation = CreateReservation(independentStudio.Id, ownerId, independentDates);
-
-        Assert.Throws<InvalidOperationException>(() =>
-            _service.ValidateStudioDependency(dependentStudio, ownerId, dates, [existingReservation]));
-    }
-
-    [Fact]
-    public void ValidateStudioDependency_NotRentableAlone_DifferentOwner_Throws()
-    {
-        var independentStudio = CreateStudio(rentableAlone: true, name: "Villa");
+        var parentStudio = CreateStudio(rentableAlone: true, name: "Villa");
         var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
         var ownerA = Guid.NewGuid();
         var ownerB = Guid.NewGuid();
         var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
-
-        var otherReservation = CreateReservation(independentStudio.Id, ownerB, dates);
+        var parent = CreateReservation(parentStudio.Id, ownerA, dates);
 
         Assert.Throws<InvalidOperationException>(() =>
-            _service.ValidateStudioDependency(dependentStudio, ownerA, dates, [otherReservation]));
+            _service.ValidateParentLink(dependentStudio, parent, parentStudio, dates, ownerB));
+    }
+
+    [Fact]
+    public void ValidateParentLink_DatesNotContained_OverflowStart_Throws()
+    {
+        var parentStudio = CreateStudio(rentableAlone: true, name: "Villa");
+        var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
+        var ownerId = Guid.NewGuid();
+        var parentDates = new DateRange(new DateOnly(2026, 7, 3), new DateOnly(2026, 7, 10));
+        var dependentDates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var parent = CreateReservation(parentStudio.Id, ownerId, parentDates);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            _service.ValidateParentLink(dependentStudio, parent, parentStudio, dependentDates, ownerId));
+    }
+
+    [Fact]
+    public void ValidateParentLink_DatesNotContained_OverflowEnd_Throws()
+    {
+        var parentStudio = CreateStudio(rentableAlone: true, name: "Villa");
+        var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
+        var ownerId = Guid.NewGuid();
+        var parentDates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 10));
+        var dependentDates = new DateRange(new DateOnly(2026, 7, 5), new DateOnly(2026, 7, 15));
+        var parent = CreateReservation(parentStudio.Id, ownerId, parentDates);
+
+        Assert.Throws<InvalidOperationException>(() =>
+            _service.ValidateParentLink(dependentStudio, parent, parentStudio, dependentDates, ownerId));
+    }
+
+    [Fact]
+    public void ValidateParentLink_ParentIsChained_Throws()
+    {
+        var parentStudio = CreateStudio(rentableAlone: true, name: "Villa");
+        var dependentStudio = CreateStudio(rentableAlone: false, name: "Studio Centre");
+        var ownerId = Guid.NewGuid();
+        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var parent = CreateReservation(parentStudio.Id, ownerId, dates);
+        parent.SetParentReservation(Guid.NewGuid());
+
+        Assert.Throws<InvalidOperationException>(() =>
+            _service.ValidateParentLink(dependentStudio, parent, parentStudio, dates, ownerId));
+    }
+
+    // --- PropagateStatusToDependents ---
+
+    [Fact]
+    public void PropagateStatusToDependents_CopiesStatusToAll()
+    {
+        var studioId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var parent = CreateReservation(studioId, ownerId, dates);
+        parent.Accept("Jean");
+
+        var dep1 = CreateReservation(Guid.NewGuid(), ownerId, dates);
+        var dep2 = CreateReservation(Guid.NewGuid(), ownerId, dates);
+
+        _service.PropagateStatusToDependents(parent, [dep1, dep2]);
+
+        Assert.Equal(ReservationStatus.Accepted, dep1.Status);
+        Assert.Equal("Jean", dep1.AcceptedBy);
+        Assert.Equal(ReservationStatus.Accepted, dep2.Status);
+        Assert.Equal("Jean", dep2.AcceptedBy);
+    }
+
+    [Fact]
+    public void PropagateStatusToDependents_Confirmed_CopiesAllFields()
+    {
+        var studioId = Guid.NewGuid();
+        var ownerId = Guid.NewGuid();
+        var dates = new DateRange(new DateOnly(2026, 7, 1), new DateOnly(2026, 7, 8));
+        var parent = CreateReservation(studioId, ownerId, dates);
+        parent.Accept("Jean");
+        parent.Confirm("Léa");
+
+        var dep = CreateReservation(Guid.NewGuid(), ownerId, dates);
+
+        _service.PropagateStatusToDependents(parent, [dep]);
+
+        Assert.Equal(ReservationStatus.Confirmed, dep.Status);
+        Assert.Equal("Jean", dep.AcceptedBy);
+        Assert.Equal("Léa", dep.ConfirmedBy);
+        Assert.NotNull(dep.AcceptedAt);
+        Assert.NotNull(dep.ConfirmedAt);
     }
 
     // --- ValidateNoOverlap ---

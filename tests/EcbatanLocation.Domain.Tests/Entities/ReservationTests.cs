@@ -193,4 +193,58 @@ public class ReservationTests
         var reservation = CreateReservation(adultCount: 3, childrenCount: 2, capacity: 6);
         Assert.Equal(5, reservation.TotalPersonCount);
     }
+
+    [Fact]
+    public void SetParentReservation_SetsId()
+    {
+        var reservation = CreateReservation();
+        var parentId = Guid.NewGuid();
+
+        reservation.SetParentReservation(parentId);
+
+        Assert.Equal(parentId, reservation.ParentReservationId);
+        Assert.True(reservation.HasParent);
+        Assert.NotNull(reservation.UpdatedAt);
+    }
+
+    [Fact]
+    public void ClearParentReservation_RemovesParent()
+    {
+        var reservation = CreateReservation();
+        reservation.SetParentReservation(Guid.NewGuid());
+
+        reservation.ClearParentReservation();
+
+        Assert.Null(reservation.ParentReservationId);
+        Assert.False(reservation.HasParent);
+    }
+
+    [Fact]
+    public void InheritStatus_CopiesAllFields()
+    {
+        var reservation = CreateReservation();
+        var acceptedAt = DateTime.UtcNow.AddHours(-1);
+        var confirmedAt = DateTime.UtcNow;
+
+        reservation.InheritStatus(
+            ReservationStatus.Confirmed,
+            "Jean", acceptedAt,
+            "Léa", confirmedAt);
+
+        Assert.Equal(ReservationStatus.Confirmed, reservation.Status);
+        Assert.Equal("Jean", reservation.AcceptedBy);
+        Assert.Equal(acceptedAt, reservation.AcceptedAt);
+        Assert.Equal("Léa", reservation.ConfirmedBy);
+        Assert.Equal(confirmedAt, reservation.ConfirmedAt);
+    }
+
+    [Fact]
+    public void InheritStatus_BypassesTransitionGuards()
+    {
+        var reservation = CreateReservation();
+
+        reservation.InheritStatus(ReservationStatus.Confirmed, "Jean", DateTime.UtcNow, "Léa", DateTime.UtcNow);
+
+        Assert.Equal(ReservationStatus.Confirmed, reservation.Status);
+    }
 }

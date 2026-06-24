@@ -72,6 +72,10 @@
                                 <span class="span-name">@res.TenantName</span>
                                 <span class="span-owner">@res.OwnerName</span>
                                 <span class="span-count">@res.PersonLines.Sum(l => l.AdultCount) ad.@(res.PersonLines.Sum(l => l.ChildrenUnder3Count) > 0 ? $" +{res.PersonLines.Sum(l => l.ChildrenUnder3Count)}" : "")</span>
+                                @if (res.LinkGroupIndex >= 0)
+                                {
+                                    <span class="link-dot" style="background:@LinkColors[res.LinkGroupIndex % LinkColors.Length]"></span>
+                                }
                             </div>
                         </td>
                     }
@@ -96,6 +100,11 @@
     [Parameter] public DateOnly? RangeEnd { get; set; }
     [Parameter] public EventCallback<DateOnly> OnDaySelected { get; set; }
     [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
+
+    private static readonly string[] LinkColors = [
+        "#e74c3c", "#3498db", "#2ecc71", "#f39c12",
+        "#9b59b6", "#1abc9c", "#e67e22", "#34495e"
+    ];
 
     private bool IsInRange(DateOnly date)
     {

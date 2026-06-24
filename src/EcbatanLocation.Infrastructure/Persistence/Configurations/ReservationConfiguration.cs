@@ -33,9 +33,14 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
             pl.Ignore(p => p.TotalPersons);
         });
 
+        builder.Property(r => r.ParentReservationId).IsRequired(false);
+        builder.HasOne<Reservation>().WithMany().HasForeignKey(r => r.ParentReservationId).OnDelete(DeleteBehavior.Restrict);
+        builder.HasIndex(r => r.ParentReservationId);
+
         builder.Ignore(r => r.TotalPersonCount);
         builder.Ignore(r => r.TotalAdultCount);
         builder.Ignore(r => r.TotalChildrenUnder3Count);
+        builder.Ignore(r => r.HasParent);
         builder.Ignore(r => r.DomainEvents);
 
         builder.HasIndex(r => r.StudioId);
