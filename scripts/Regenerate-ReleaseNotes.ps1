@@ -13,6 +13,10 @@
     GitHub), lit les labels ACTUELS de chaque PR, puis reconstruit lui-même
     les notes catégorisées en miroir de .github/release.yml.
 
+    Si une plage ne contient aucune PR (changements poussés en commits directs
+    sur la branche), le script bascule sur un fallback qui catégorise les
+    messages de commit d'après leur préfixe Conventional Commit (fix:, feat:…).
+
     Seul le texte de la release est modifié — les artefacts attachés et le tag
     ne sont pas touchés. Le script est idempotent : relançable sans risque.
 
@@ -45,6 +49,17 @@ $categories = [ordered]@{
 }
 $catchAllTitle = '🔄 Autres changements'
 $excludeLabels = @('ignore-for-release')
+
+# Préfixe Conventional Commit -> titre de catégorie (fallback sans PR)
+$prefixToCat = @{
+    fix = '🐛 Corrections'; bug = '🐛 Corrections'
+    feat = '🚀 Fonctionnalités'; feature = '🚀 Fonctionnalités'; perf = '🚀 Fonctionnalités'
+    refactor = '♻️ Refactoring'
+    docs = '📝 Documentation'
+    deps = '🤖 Dépendances'
+    ci = '🔧 CI / Build'; build = '🔧 CI / Build'
+    chore = '🧹 Maintenance'
+}
 # ---------------------------------------------------------------------------
 
 if (-not $Repo) {
@@ -70,8 +85,39 @@ function Get-CategoryFor {
     return $catchAllTitle
 }
 
+# Entrées catégorisées issues des commits directs d'une plage (fallback sans PR).
+# Retourne une table ordonnée catégorie -> liste de lignes "* ...".
+function Get-CommitCategories {
+    param([string]$Prev, [string]$Tag)
+
+    if (-not $Prev) { return $null }   # pas de borne basse : on ne tente pas
+
+    $raw = gh api "repos/$Repo/compare/$Prev...$Tag" `
+        -q '.commits[] | "\(.sha[0:7])\t\(.commit.message | split("\n")[0])"' 2>$null
+    if (-not $raw) { return $null }
+
+    $result = [ordered]@{}
+    foreach ($entry in @($raw)) {
+        $sha, $subject = $entry -split "`t", 2
+        if (-not $subject) { continue }
+        if ($subject -match '^Merge ') { continue }   # commits de merge ignorés
+
+        $cat = $catchAllTitle
+        if ($subject -match '^\s*([a-zA-Z]+)(\([^)]*\))?!?:') {
+            $p = $Matches[1].ToLower()
+            if ($prefixToCat.ContainsKey($p)) { $cat = $prefixToCat[$p] }
+        }
+        if (-not $result.Contains($cat)) {
+            $result[$cat] = New-Object System.Collections.Generic.List[string]
+        }
+        $result[$cat].Add("* $subject ($sha)")
+    }
+    if ($result.Count -eq 0) { return $null }
+    return $result
+}
+
 function Build-Notes {
-    param([string]$FlatBody)
+    param([string]$FlatBody, [string]$Prev, [string]$Tag)
 
     $prLines = [ordered]@{}           # catégorie -> liste de lignes "* ..."
     $tail = New-Object System.Collections.Generic.List[string]  # New Contributors, Full Changelog...
@@ -102,6 +148,12 @@ function Build-Notes {
 
     # Nettoyage : retirer d'éventuelles lignes vides en tête de tail
     while ($tail.Count -gt 0 -and [string]::IsNullOrWhiteSpace($tail[0])) { $tail.RemoveAt(0) }
+
+    # Fallback : aucune PR dans la plage -> on catégorise les commits directs
+    if ($prLines.Count -eq 0) {
+        $commitCats = Get-CommitCategories -Prev $Prev -Tag $Tag
+        if ($commitCats) { $prLines = $commitCats }
+    }
 
     $sb = New-Object System.Text.StringBuilder
     [void]$sb.AppendLine("## What's Changed")
@@ -134,7 +186,7 @@ foreach ($tag in $tags) {
     if ($prev) { $apiArgs += @("-f", "previous_tag_name=$prev") }
 
     $flat = (gh api @apiArgs -q '.body') -join "`n"
-    $notes = Build-Notes -FlatBody $flat
+    $notes = Build-Notes -FlatBody $flat -Prev $prev -Tag $tag
 
     if ($PSCmdlet.ShouldProcess($tag, "Réécrire les notes de release")) {
         $notes | gh release edit $tag --repo $Repo --notes-file -
