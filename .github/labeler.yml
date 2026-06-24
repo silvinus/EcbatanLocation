@@ -21,3 +21,21 @@ tests:
 ci:
   - changed-files:
       - any-glob-to-any-file: '.github/**'
+  - head-branch: ['^ci/']
+
+# Change-type labels, derived from the branch naming convention
+# (feat/, fix/, refactor/, docs/, chore/). Drives release notes grouping.
+feat:
+  - head-branch: ['^feat/', '^feature/']
+
+fix:
+  - head-branch: ['^fix/', '^hotfix/']
+
+refactor:
+  - head-branch: ['^refactor/']
+
+documentation:
+  - head-branch: ['^docs/']
+
+chore:
+  - head-branch: ['^chore/']
