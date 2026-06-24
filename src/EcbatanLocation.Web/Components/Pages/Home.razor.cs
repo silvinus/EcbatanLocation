@@ -38,7 +38,31 @@ public partial class Home
     private ViewMode _viewMode = ViewMode.Month;
     private DateOnly _weekStart;
 
+    private bool _showFilters;
+    private bool _showHelp;
+
+    private int ActiveFilterCount =>
+        (SelectedStudioId is not null ? 1 : 0)
+        + (SelectedStatus is not null ? 1 : 0)
+        + (SelectedOwnerId is not null ? 1 : 0);
+
     private enum ViewMode { Month, Week, List }
+
+    private void ToggleFilters()
+    {
+        _showFilters = !_showFilters;
+        _showHelp = false;
+    }
+
+    private void CloseFilters() => _showFilters = false;
+
+    private void ToggleHelp()
+    {
+        _showHelp = !_showHelp;
+        _showFilters = false;
+    }
+
+    private void CloseHelp() => _showHelp = false;
 
     protected override async Task OnInitializedAsync()
     {
