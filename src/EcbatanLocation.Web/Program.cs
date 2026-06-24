@@ -24,6 +24,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ThemeService>();
+builder.Services.AddScoped<ViewportService>();
 builder.Services.AddSingleton<ReportPdfGenerator>();
 
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
