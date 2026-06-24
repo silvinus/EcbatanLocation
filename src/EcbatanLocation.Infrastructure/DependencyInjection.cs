@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using EcbatanLocation.Application.Messaging;
 using EcbatanLocation.Application.Services;
 using EcbatanLocation.Domain.Repositories;
 using EcbatanLocation.Infrastructure.Identity;
@@ -50,6 +51,7 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<EcbatanLocationDbContext>()
             .AddDefaultTokenProviders();
 
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IStudioRepository, StudioRepository>();
         services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<IOwnerRepository, OwnerRepository>();

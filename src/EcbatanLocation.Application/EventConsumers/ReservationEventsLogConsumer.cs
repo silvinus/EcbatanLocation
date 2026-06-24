@@ -1,14 +1,11 @@
+using EcbatanLocation.Application.Events;
 using EcbatanLocation.Application.Messaging;
 using Microsoft.Extensions.Logging;
 using EcbatanLocation.Domain.Events;
 
-namespace EcbatanLocation.Application.Events;
+namespace EcbatanLocation.Application.EventConsumers;
 
-/// <summary>
-/// Example consumer of reservation domain events. Logs each lifecycle transition;
-/// future consumers (email notifications, audit trail) can be added the same way.
-/// </summary>
-public sealed class ReservationEventsLogger(ILogger<ReservationEventsLogger> logger)
+public sealed class ReservationEventsLogConsumer(ILogger<ReservationEventsLogConsumer> logger)
     : INotificationHandler<DomainEventNotification<ReservationCreated>>,
       INotificationHandler<DomainEventNotification<ReservationAccepted>>,
       INotificationHandler<DomainEventNotification<ReservationConfirmed>>,

@@ -1,12 +1,10 @@
 using EcbatanLocation.Application.Messaging;
 using EcbatanLocation.Domain.Repositories;
-using EcbatanLocation.Domain.Services;
 
 namespace EcbatanLocation.Application.Commands.ConfirmReservation;
 
 public class ConfirmReservationCommandHandler(
-    IReservationRepository reservationRepository,
-    ReservationDomainService domainService) : IRequestHandler<ConfirmReservationCommand>
+    IReservationRepository reservationRepository) : IRequestHandler<ConfirmReservationCommand>
 {
     public async Task Handle(ConfirmReservationCommand request, CancellationToken cancellationToken)
     {
@@ -19,12 +17,5 @@ public class ConfirmReservationCommandHandler(
 
         reservation.Confirm(request.ConfirmedBy);
         await reservationRepository.UpdateAsync(reservation, cancellationToken);
-
-        var dependents = await reservationRepository.GetDependentsByParentIdAsync(reservation.Id, cancellationToken);
-        if (dependents.Count > 0)
-        {
-            domainService.PropagateStatusToDependents(reservation, dependents);
-            await reservationRepository.UpdateRangeAsync(dependents, cancellationToken);
-        }
     }
 }

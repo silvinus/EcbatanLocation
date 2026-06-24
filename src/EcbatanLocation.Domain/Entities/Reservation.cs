@@ -84,9 +84,10 @@ public class Reservation : IHasDomainEvents
         _domainEvents.Add(new ReservationConfirmed(Id, by));
     }
 
-    /// <summary>Records the deletion event. Call before removing the reservation from its repository.</summary>
     public void MarkDeleted()
     {
+        Status = ReservationStatus.Deleted;
+        UpdatedAt = DateTime.UtcNow;
         _domainEvents.Add(new ReservationDeleted(Id));
     }
 

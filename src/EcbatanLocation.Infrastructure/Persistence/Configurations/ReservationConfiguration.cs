@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using EcbatanLocation.Domain.Entities;
+using EcbatanLocation.Domain.Enums;
 
 namespace EcbatanLocation.Infrastructure.Persistence.Configurations;
 
@@ -42,6 +43,8 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         builder.Ignore(r => r.TotalChildrenUnder3Count);
         builder.Ignore(r => r.HasParent);
         builder.Ignore(r => r.DomainEvents);
+
+        builder.HasQueryFilter(r => r.Status != ReservationStatus.Deleted);
 
         builder.HasIndex(r => r.StudioId);
         builder.HasIndex(r => new { r.StudioId, r.Status });

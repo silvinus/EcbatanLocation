@@ -40,24 +40,16 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
 
     public async Task AddAsync(Reservation reservation, CancellationToken ct = default)
     {
-        await using var tx = await context.Database.BeginTransactionAsync(ct);
-
         await GuardNoOverlapAsync(reservation, ct);
         await context.Reservations.AddAsync(reservation, ct);
         await SaveTranslatingOverlapAsync(ct);
-
-        await tx.CommitAsync(ct);
     }
 
     public async Task UpdateAsync(Reservation reservation, CancellationToken ct = default)
     {
-        await using var tx = await context.Database.BeginTransactionAsync(ct);
-
         await GuardNoOverlapAsync(reservation, ct);
         context.Reservations.Update(reservation);
         await SaveTranslatingOverlapAsync(ct);
-
-        await tx.CommitAsync(ct);
     }
 
     /// <summary>
