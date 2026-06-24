@@ -1,17 +1,20 @@
 <#
 .SYNOPSIS
-    Régénère les notes de toutes les releases GitHub existantes en appliquant
-    la configuration .github/release.yml (catégorisation par labels).
+    Régénère les notes de toutes les releases GitHub existantes en regroupant
+    les PR par catégorie, d'après leurs labels actuels.
 
 .DESCRIPTION
-    L'API GitHub `generate-notes` lit .github/release.yml depuis la branche
-    par défaut. Ce fichier doit donc être présent sur `main` AVANT de lancer
-    ce script.
+    /!\ L'API GitHub `generate-notes` lit .github/release.yml depuis le commit
+    du tag concerné. Pour les tags créés AVANT l'ajout du fichier, la
+    catégorisation ne peut donc pas être appliquée par l'API (liste plate).
 
-    Pour chaque tag (du plus ancien au plus récent), le script régénère les
-    notes en passant le tag précédent comme borne, puis réécrit le corps de
-    la release. Seul le texte est modifié — les artefacts attachés ne sont
-    pas touchés. Le script est idempotent : relançable sans risque.
+    Ce script contourne la limite : pour chaque release, il récupère la liste
+    des PR de la plage via l'API generate-notes (liste fiable, gérée par
+    GitHub), lit les labels ACTUELS de chaque PR, puis reconstruit lui-même
+    les notes catégorisées en miroir de .github/release.yml.
+
+    Seul le texte de la release est modifié — les artefacts attachés et le tag
+    ne sont pas touchés. Le script est idempotent : relançable sans risque.
 
 .PARAMETER Repo
     Dépôt au format owner/name. Détecté automatiquement si omis.
@@ -20,8 +23,8 @@
     Affiche les notes générées sans modifier les releases.
 
 .EXAMPLE
-    ./scripts/Regenerate-ReleaseNotes.ps1
     ./scripts/Regenerate-ReleaseNotes.ps1 -WhatIf
+    ./scripts/Regenerate-ReleaseNotes.ps1
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
@@ -30,29 +33,108 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# --- Catégories, en miroir de .github/release.yml (ordre = priorité) ---------
+$categories = [ordered]@{
+    '🐛 Corrections'     = @('bug', 'fix')
+    '🚀 Fonctionnalités' = @('enhancement', 'feat', 'feature')
+    '♻️ Refactoring'     = @('refactor')
+    '📝 Documentation'   = @('documentation', 'docs')
+    '🤖 Dépendances'     = @('dependencies')
+    '🔧 CI / Build'      = @('ci')
+    '🧹 Maintenance'     = @('chore')
+}
+$catchAllTitle = '🔄 Autres changements'
+$excludeLabels = @('ignore-for-release')
+# ---------------------------------------------------------------------------
+
 if (-not $Repo) {
     $Repo = gh repo view --json nameWithOwner -q '.nameWithOwner'
 }
 Write-Host "Dépôt : $Repo" -ForegroundColor Cyan
 
+# Labels de toutes les PR, en une seule requête (numéro -> liste de labels)
+Write-Host "Chargement des labels de PR..." -ForegroundColor DarkGray
+$prLabels = @{}
+gh pr list --repo $Repo --state all --limit 500 --json number,labels |
+    ConvertFrom-Json |
+    ForEach-Object { $prLabels[[string]$_.number] = @($_.labels.name) }
+
+function Get-CategoryFor {
+    param([string]$PrNumber)
+    $labels = $prLabels[$PrNumber]
+    if (-not $labels) { return $catchAllTitle }
+    if ($labels | Where-Object { $excludeLabels -contains $_ }) { return $null }  # exclu
+    foreach ($cat in $categories.Keys) {
+        if ($labels | Where-Object { $categories[$cat] -contains $_ }) { return $cat }
+    }
+    return $catchAllTitle
+}
+
+function Build-Notes {
+    param([string]$FlatBody)
+
+    $prLines = [ordered]@{}           # catégorie -> liste de lignes "* ..."
+    $tail = New-Object System.Collections.Generic.List[string]  # New Contributors, Full Changelog...
+    $mode = 'prs'
+
+    foreach ($line in ($FlatBody -split "`r?`n")) {
+        # Bascule en mode "tail" : section additionnelle (New Contributors) ou Full Changelog
+        if (($line -match '^##\s' -and $line -notmatch "What's Changed") -or $line -match 'Full Changelog') {
+            $mode = 'tail'
+        }
+
+        if ($mode -eq 'tail') {
+            $tail.Add($line)
+            continue
+        }
+
+        # mode "prs" : on ne retient que les lignes de PR ; on ignore l'entête et les lignes vides
+        if ($line -match '^\s*\*\s' -and $line -match 'pull/(\d+)') {
+            $num = $Matches[1]
+            $cat = Get-CategoryFor -PrNumber $num
+            if (-not $cat) { continue }                # PR exclue
+            if (-not $prLines.Contains($cat)) {
+                $prLines[$cat] = New-Object System.Collections.Generic.List[string]
+            }
+            $prLines[$cat].Add($line)
+        }
+    }
+
+    # Nettoyage : retirer d'éventuelles lignes vides en tête de tail
+    while ($tail.Count -gt 0 -and [string]::IsNullOrWhiteSpace($tail[0])) { $tail.RemoveAt(0) }
+
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine("## What's Changed")
+    $emitted = $false
+    $orderedTitles = @($categories.Keys) + $catchAllTitle
+    foreach ($title in $orderedTitles) {
+        if ($prLines.Contains($title)) {
+            [void]$sb.AppendLine("### $title")
+            foreach ($l in $prLines[$title]) { [void]$sb.AppendLine($l) }
+            $emitted = $true
+        }
+    }
+    if (-not $emitted) { return $FlatBody }   # rien à catégoriser : on garde l'original
+    if ($tail.Count -gt 0) {
+        [void]$sb.AppendLine()
+        foreach ($l in $tail) { [void]$sb.AppendLine($l) }
+    }
+    return $sb.ToString().TrimEnd()
+}
+
 # Tags du plus ancien au plus récent (tri sémantique sur la version sans le 'v')
 $tags = gh release list --repo $Repo --limit 200 --json tagName -q '.[].tagName' |
         Sort-Object { [version]($_ -replace '^v') }
 
-if (-not $tags) {
-    Write-Warning "Aucune release trouvée."
-    return
-}
+if (-not $tags) { Write-Warning "Aucune release trouvée."; return }
 
 $prev = $null
 foreach ($tag in $tags) {
-    $apiArgs = @(
-        "repos/$Repo/releases/generate-notes",
-        "-f", "tag_name=$tag"
-    )
+    $apiArgs = @("repos/$Repo/releases/generate-notes", "-f", "tag_name=$tag")
     if ($prev) { $apiArgs += @("-f", "previous_tag_name=$prev") }
 
-    $notes = gh api @apiArgs -q '.body'
+    $flat = (gh api @apiArgs -q '.body') -join "`n"
+    $notes = Build-Notes -FlatBody $flat
 
     if ($PSCmdlet.ShouldProcess($tag, "Réécrire les notes de release")) {
         $notes | gh release edit $tag --repo $Repo --notes-file -
@@ -61,7 +143,12 @@ foreach ($tag in $tags) {
     else {
         Write-Host "---- $tag (aperçu) ----" -ForegroundColor Yellow
         Write-Host $notes
+        Write-Host ""
     }
 
     $prev = $tag
+}
+
+if ($WhatIfPreference) {
+    Write-Host "Mode aperçu — relancez sans -WhatIf pour appliquer." -ForegroundColor Yellow
 }
