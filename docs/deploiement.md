@@ -1,14 +1,17 @@
 ---
 layout: default
-title: Deploiement
-nav_order: 6
+title: Deploiement VPS
+nav_order: 7
 ---
 
-# Guide de deploiement
+# Guide de deploiement (VPS Linux)
 {: .fs-8 }
 
-Installation serveur, deploiement et maintenance.
+Installation serveur, deploiement et maintenance sur VPS.
 {: .fs-5 .fw-300 }
+
+{: .note }
+La cible de deploiement **par defaut** est **Northflank** (image Docker). Voir [Deploiement Northflank](deploiement-northflank). Cette page decrit la cible **alternative** : un VPS Linux avec executable self-contained derriere Nginx.
 
 ---
 

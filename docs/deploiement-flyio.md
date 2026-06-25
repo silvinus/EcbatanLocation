@@ -1,4 +1,12 @@
+---
+layout: default
+title: Deploiement Fly.io
+nav_order: 8
+---
+
 # Déploiement sur Fly.io — Ecbatan Location
+
+> Cible de déploiement **de secours** (fallback) — sélectionnable via `workflow_dispatch`.
 
 ## Prérequis
 

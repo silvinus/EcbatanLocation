@@ -15,11 +15,11 @@ Le planning est consultable publiquement en lecture seule et éditable par les p
 |--------|------------|
 | Frontend | Blazor Server (.NET 10) |
 | Backend | ASP.NET Core 10 |
-| Authentification | ASP.NET Identity |
-| Base de données | SQLite (via Entity Framework Core) |
-| Architecture | DDD + CQRS (médiateur interne) |
+| Authentification | ASP.NET Identity (lockout, cookie 2h, remember me) |
+| Base de données | SQLite (dev) / PostgreSQL (prod) — switch via `DatabaseProvider` |
+| Architecture | DDD + CQRS (médiateur interne, scope DI par handler) |
 | Tests | xUnit + FluentAssertions |
-| Déploiement | Standalone sur VPS Linux (Ubuntu 24.04) |
+| Déploiement | Docker / GitHub Container Registry → Northflank (ou VPS Linux) |
 
 ## Fonctionnalités
 
@@ -27,16 +27,22 @@ Le planning est consultable publiquement en lecture seule et éditable par les p
 
 - **Vue mensuelle** : studios en lignes, jours en colonnes, code couleur par statut
 - **Vues alternatives** : semaine et liste
-- **Filtres** : par mois, studio, statut, propriétaire
-- **KPIs d'occupation** : taux d'occupation, places occupées par jour
+- **Vue agenda mobile** : affichage adapté détecté automatiquement selon la taille d'écran
+- **Filtres** : par mois, studio, statut, propriétaire (panneau en overlay)
+- **KPIs d'occupation** : taux d'occupation, places occupées par jour, code couleur de disponibilité sur les jours
 
 ### Gestion des réservations
 
 - Création, modification et suivi des réservations par les propriétaires
 - Workflow de validation : Demande (orange) → Acceptée (bleu) → Confirmée (vert)
 - Contrôle des chevauchements (un studio est libre ou occupé, pas de location partielle)
-- Vérification de capacité (adultes + enfants ≤ capacité du studio)
-- Gestion des studios dépendants (certains studios ne sont louables qu'en complément d'un autre)
+- Vérification de capacité (adultes ≤ capacité du studio ; les enfants de moins de 3 ans ne comptent pas)
+- Studios dépendants reliés explicitement à une réservation parent (les dates du parent doivent englober celles de l'enfant ; le statut est propagé du parent vers ses enfants)
+
+### Rapport de réservations
+
+- Synthèse des réservations avec calcul de prix par propriétaire et par statut
+- Export PDF du rapport
 
 ### Catalogue d'hébergements
 
@@ -53,8 +59,8 @@ Le planning est consultable publiquement en lecture seule et éditable par les p
 | Rôle | Droits |
 |------|--------|
 | Public (anonyme) | Consultation du planning en lecture seule |
-| Propriétaire | Création, modification, changement de statut des réservations |
-| Admin | Gestion des studios, tarifs et comptes propriétaires |
+| Propriétaire | Création, modification, changement de statut des réservations, rapport |
+| Admin | Gestion des studios (CRUD), grille tarifaire, comptes propriétaires |
 
 ### Interface
 
@@ -117,20 +123,27 @@ dotnet test
 
 ## Déploiement
 
-L'application se déploie sur un VPS Linux (Ubuntu 24.04 LTS) avec Nginx en reverse proxy et un certificat SSL Let's Encrypt.
+Deux cibles de déploiement sont supportées :
+
+- **Northflank (cible par défaut)** : image Docker poussée sur GitHub Container Registry (GHCR), tirée et redéployée par Northflank. Voir [docs/deploiement-northflank.md](docs/deploiement-northflank.md).
+- **VPS Linux (alternative)** : exécutable self-contained linux-x64 derrière Nginx (reverse proxy) avec SSL Let's Encrypt. Voir [docs/GUIDE_DEPLOIEMENT.md](docs/GUIDE_DEPLOIEMENT.md).
+
+Fly.io reste disponible en fallback ([docs/deploiement-flyio.md](docs/deploiement-flyio.md)).
 
 ### Créer une release
 
-Le projet utilise **GitHub Actions** : chaque tag `v*` déclenche un build automatique qui produit un exécutable self-contained linux-x64 publié en tant que **GitHub Release**.
+Le projet utilise **GitHub Actions** : chaque tag `v*` déclenche le workflow `release.yml` qui lance les tests, produit un exécutable self-contained linux-x64 publié en **GitHub Release**, build l'image Docker, la pousse sur GHCR et déploie sur Northflank.
 
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
 ```
 
-Le pipeline lance les tests, build l'application et publie l'archive sur GitHub Releases avec des release notes auto-générées.
+Le pipeline génère des release notes auto-catégorisées par type de changement.
 
-### Déployer une release
+### Déployer une release (VPS Linux)
+
+> Sur Northflank, le déploiement est automatique à la fin du workflow `release.yml` (ou via `Run workflow`). Les étapes ci-dessous concernent la cible VPS.
 
 Depuis le PC local, à la racine du projet :
 

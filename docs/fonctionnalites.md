@@ -35,6 +35,10 @@ Affiche toutes les reservations du mois sous forme de liste triee par date d'arr
 
 ![Vue liste](screenshots/07-vue-liste.png)
 
+### Vue agenda mobile
+
+Sur petit ecran, le planning bascule automatiquement (detection de la taille du viewport) vers une vue agenda optimisee pour le tactile.
+
 ---
 
 ## Gestion des reservations
@@ -102,6 +106,12 @@ La grille est modifiable par un administrateur.
 
 ---
 
+## Rapport de reservations
+
+Un rapport synthetise les reservations avec le **calcul de prix** detaille, regroupe par proprietaire et par statut. Il est **exportable en PDF**.
+
+---
+
 ## Filtres et KPIs
 
 ### Filtres disponibles
@@ -115,6 +125,7 @@ La grille est modifiable par un administrateur.
 
 - **Places occupees / total** : nombre de places prises vs capacite totale
 - **Studios occupes** : nombre de studios ayant au moins une reservation
+- **Code couleur de disponibilite** : chaque jour du planning est colore selon son niveau d'occupation
 
 Cliquer sur un jour ou selectionner une periode (2 clics) pour afficher le taux moyen d'occupation.
 
@@ -125,8 +136,8 @@ Cliquer sur un jour ou selectionner une periode (2 clics) pour afficher le taux 
 | Role | Droits |
 |------|--------|
 | Public (anonyme) | Consultation du planning en lecture seule |
-| Proprietaire | Creation, modification, changement de statut des reservations |
-| Admin | Gestion des tarifs et catalogue des studios |
+| Proprietaire | Creation, modification, changement de statut des reservations, rapport |
+| Admin | Gestion de la grille tarifaire, des studios (CRUD) et des comptes proprietaires |
 
 ---
 
