@@ -199,6 +199,11 @@ header {
 .day-header:hover { color: var(--brand); }
 .day-header.today { color: var(--brand); font-weight: 900; }
 .day-header.weekend { color: var(--muted); opacity: .7; }
+/* Availability gradient bar under each day number (red = full, green = free) */
+.day-occ {
+    display: block; height: 4px; border-radius: 2px;
+    margin: 3px 0 0; width: 100%;
+}
 
 /* Booking cells */
 .booking {

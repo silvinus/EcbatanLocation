@@ -23,11 +23,18 @@ else
         @foreach (var group in groups)
         {
             var isToday = group.Key == today;
+            var occ = GetOccupation(group.Key);
             <div class="agenda-day @(isToday ? "today" : "")">
                 <div class="agenda-date">
                     <span class="agenda-dow">@group.Key.ToString("ddd", culture)</span>
                     <span class="agenda-dom">@group.Key.Day</span>
                     <span class="agenda-mon">@group.Key.ToString("MMM", culture)</span>
+                    @if (occ is not null)
+                    {
+                        <span class="day-occ"
+                              style="background:@OccupancyPalette.Color(occ)"
+                              title="@($"{occ.AvailablePlaces} places libres sur {occ.TotalCapacity}")"></span>
+                    }
                 </div>
                 <div class="agenda-items">
                     @foreach (var item in group.OrderBy(x => x.Studio.Name))
@@ -83,12 +90,23 @@ else
 
 @code {
     [Parameter, EditorRequired] public MonthlyPlanningDto Planning { get; set; } = default!;
+    [Parameter] public MonthlyOccupationDto? Occupation { get; set; }
     [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
 
     private static readonly string[] LinkColors = [
         "#e74c3c", "#3498db", "#2ecc71", "#f39c12",
         "#9b59b6", "#1abc9c", "#e67e22", "#34495e"
     ];
+
+    private Dictionary<DateOnly, DailyOccupationDto>? _occupationByDay;
+
+    protected override void OnParametersSet()
+    {
+        _occupationByDay = Occupation?.Days.ToDictionary(d => d.Date);
+    }
+
+    private DailyOccupationDto? GetOccupation(DateOnly date)
+        => _occupationByDay is not null && _occupationByDay.TryGetValue(date, out var occ) ? occ : null;
 
     private async Task OnClick(Guid id) => await OnReservationClicked.InvokeAsync(id);
 
