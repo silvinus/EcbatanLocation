@@ -73,6 +73,7 @@
     [Parameter] public DateOnly? SelectedDate { get; set; }
     [Parameter] public MonthlyOccupationDto? Occupation { get; set; }
     [Parameter] public EventCallback<DateOnly> OnDaySelected { get; set; }
+    [Parameter] public EventCallback<DateOnly> OnWeekStartChanged { get; set; }
     [Parameter] public EventCallback<Guid> OnReservationClicked { get; set; }
 
     private Dictionary<DateOnly, DailyOccupationDto>? _occupationByDay;
@@ -88,13 +89,7 @@
     private async Task OnDayClicked(DateOnly date) => await OnDaySelected.InvokeAsync(date);
     private async Task OnReservationClick(Guid id) => await OnReservationClicked.InvokeAsync(id);
 
-    private void PreviousWeek()
-    {
-        WeekStart = WeekStart.AddDays(-7);
-    }
+    private async Task PreviousWeek() => await OnWeekStartChanged.InvokeAsync(WeekStart.AddDays(-7));
 
-    private void NextWeek()
-    {
-        WeekStart = WeekStart.AddDays(7);
-    }
+    private async Task NextWeek() => await OnWeekStartChanged.InvokeAsync(WeekStart.AddDays(7));
 }
