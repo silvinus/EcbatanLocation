@@ -197,8 +197,31 @@ public partial class Home : IDisposable
         _rangeStart = null;
         _rangeEnd = null;
         _rangeOccupation = null;
+        if (_viewMode == ViewMode.Week)
+        {
+            var firstOfMonth = new DateOnly(Year, Month, 1);
+            var dayOfWeek = ((int)firstOfMonth.DayOfWeek + 6) % 7;
+            _weekStart = firstOfMonth.AddDays(-dayOfWeek);
+        }
         await LoadPlanning();
         await LoadOccupation();
+        await LoadMonthlyOccupation();
+    }
+
+    private async Task OnWeekStartChanged(DateOnly newWeekStart)
+    {
+        _weekStart = newWeekStart;
+        var weekEnd = newWeekStart.AddDays(6);
+        if (newWeekStart.Month != Month || newWeekStart.Year != Year)
+        {
+            Year = newWeekStart.Year;
+            Month = newWeekStart.Month;
+        }
+        else if (weekEnd.Month != Month || weekEnd.Year != Year)
+        {
+            // week spans two months — keep the month where the week starts
+        }
+        await LoadPlanning();
         await LoadMonthlyOccupation();
     }
 
