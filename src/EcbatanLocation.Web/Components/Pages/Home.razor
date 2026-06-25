@@ -70,6 +70,7 @@
                                   SelectedDate="@_selectedDate"
                                   RangeStart="@_rangeStart"
                                   RangeEnd="@_rangeEnd"
+                                  Occupation="@_monthlyOccupation"
                                   OnDaySelected="OnDaySelected"
                                   OnReservationClicked="OnReservationClicked" />
                 }
@@ -78,6 +79,7 @@
                     <PlanningWeekView Planning="@_planning"
                                       WeekStart="@_weekStart"
                                       SelectedDate="@_selectedDate"
+                                      Occupation="@_monthlyOccupation"
                                       OnDaySelected="OnDaySelected"
                                       OnReservationClicked="OnReservationClicked" />
                 }
@@ -89,6 +91,7 @@
                 else if (_viewMode == ViewMode.Agenda)
                 {
                     <PlanningMobileAgenda Planning="@_planning"
+                                          Occupation="@_monthlyOccupation"
                                           OnReservationClicked="OnReservationClicked" />
                 }
             }

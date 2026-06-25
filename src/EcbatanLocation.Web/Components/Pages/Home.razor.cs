@@ -32,6 +32,7 @@ public partial class Home : IDisposable
     private DateOnly? _rangeEnd;
     private DailyOccupationDto? _occupation;
     private RangeOccupationDto? _rangeOccupation;
+    private MonthlyOccupationDto? _monthlyOccupation;
     private ReservationDetailDto? _selectedReservation;
 
     private bool _isAuthenticated;
@@ -87,6 +88,7 @@ public partial class Home : IDisposable
         await ResolveCurrentOwner();
         await LoadPlanning();
         await LoadOccupation();
+        await LoadMonthlyOccupation();
 
         Viewport.OnChange += OnViewportChanged;
     }
@@ -159,6 +161,15 @@ public partial class Home : IDisposable
             new EcbatanLocation.Application.Queries.GetDailyOccupation.GetDailyOccupationQuery(date));
     }
 
+    // Per-day occupation for the visible month, used to color the day header gradient.
+    // Independent of the studio/status/owner filters, so it only needs to be reloaded
+    // when the month changes or a reservation is created/edited/deleted.
+    private async Task LoadMonthlyOccupation()
+    {
+        _monthlyOccupation = await Mediator.Send(
+            new EcbatanLocation.Application.Queries.GetMonthlyOccupation.GetMonthlyOccupationQuery(Year, Month));
+    }
+
     private async Task PreviousMonth()
     {
         if (Month == 1) { Month = 12; Year--; }
@@ -188,6 +199,7 @@ public partial class Home : IDisposable
         _rangeOccupation = null;
         await LoadPlanning();
         await LoadOccupation();
+        await LoadMonthlyOccupation();
     }
 
     private async Task OnStudioChanged(Guid? studioId)
@@ -210,35 +222,13 @@ public partial class Home : IDisposable
 
     private async Task OnDaySelected(DateOnly date)
     {
+        // Range selection is disabled: clicking a day only selects that single
+        // date and shows its daily occupation.
         _selectedDate = date;
-
-        if (_rangeStart is null || _rangeEnd is not null)
-        {
-            _rangeStart = date;
-            _rangeEnd = null;
-            _rangeOccupation = null;
-            await LoadOccupation();
-        }
-        else
-        {
-            if (date < _rangeStart)
-            {
-                _rangeEnd = _rangeStart;
-                _rangeStart = date;
-            }
-            else if (date == _rangeStart)
-            {
-                _rangeStart = null;
-                _rangeOccupation = null;
-                await LoadOccupation();
-                return;
-            }
-            else
-            {
-                _rangeEnd = date;
-            }
-            await LoadRangeOccupation();
-        }
+        _rangeStart = null;
+        _rangeEnd = null;
+        _rangeOccupation = null;
+        await LoadOccupation();
     }
 
     private async Task ClearRange()
@@ -296,6 +286,7 @@ public partial class Home : IDisposable
         _selectedReservation = null;
         await LoadPlanning();
         await LoadOccupation();
+        await LoadMonthlyOccupation();
         await LoadRangeOccupation();
     }
 
@@ -319,6 +310,7 @@ public partial class Home : IDisposable
         _selectedReservation = null;
         await LoadPlanning();
         await LoadOccupation();
+        await LoadMonthlyOccupation();
         await LoadRangeOccupation();
     }
 
@@ -332,6 +324,7 @@ public partial class Home : IDisposable
         }
         await LoadPlanning();
         await LoadOccupation();
+        await LoadMonthlyOccupation();
         await LoadRangeOccupation();
     }
 
