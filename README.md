@@ -1,7 +1,7 @@
 # Ecbatan Location
 
 [![CI](https://github.com/silvinus/EcbatanLocation/actions/workflows/ci.yml/badge.svg)](https://github.com/silvinus/EcbatanLocation/actions/workflows/ci.yml)
-[![Release](https://github.com/silvinus/EcbatanLocation/actions/workflows/release.yml/badge.svg)](https://github.com/silvinus/EcbatanLocation/actions/workflows/release.yml)
+[![Release](https://github.com/silvinus/EcbatanLocation/actions/workflows/release.yml/badge.svg?event=push)](https://github.com/silvinus/EcbatanLocation/actions/workflows/release.yml)
 ![.NET 10](https://img.shields.io/badge/.NET-10.0-512bd4)
 ![License](https://img.shields.io/badge/license-private-gray)
 
