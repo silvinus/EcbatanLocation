@@ -40,7 +40,7 @@ En mode connecte, vous avez acces a toutes les fonctionnalites de lecture, plus 
 - Supprimer des reservations
 - Changer votre mot de passe
 
-![Planning proprietaire](screenshots/03-planning-connecte.png)
+![Planning proprietaire](screenshots/03-planning-proprietaire.png)
 
 ---
 
@@ -67,6 +67,10 @@ Affiche le planning sur 7 jours avec plus d'espace par jour. Naviguer entre les 
 Toutes les reservations du mois sous forme de liste triee par date d'arrivee.
 
 ![Vue liste](screenshots/07-vue-liste.png)
+
+### Vue Agenda (mobile)
+
+Sur smartphone, le planning bascule automatiquement vers une vue agenda adaptee au tactile (la bascule depend de la taille de l'ecran).
 
 ---
 
@@ -173,9 +177,19 @@ Accessible uniquement aux comptes ayant le role **Admin** (bouton **Administrati
 ### Studios
 
 - Visualiser le catalogue des studios (capacite, cuisine, louable seul)
-- Le catalogue est fige dans la configuration initiale
+- **Creer** ou **supprimer** un studio
+- Marquer un studio **Indisponible** pour le retirer temporairement du planning
 
 ![Administration studios](screenshots/09-admin-studios.png)
+
+### Comptes proprietaires
+
+- Gerer les comptes des proprietaires (onglet **Proprietaires** de l'administration)
+
+### Rapport
+
+- Generer un **rapport de reservations** avec calcul de prix par proprietaire et par statut
+- **Exporter le rapport en PDF**
 
 ---
 

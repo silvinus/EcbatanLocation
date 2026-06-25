@@ -1,4 +1,6 @@
-# Guide de déploiement - Ecbatan Location
+# Guide de déploiement (VPS Linux) - Ecbatan Location
+
+> La cible de déploiement **par défaut** est **Northflank** (image Docker via GHCR) — voir [deploiement-northflank.md](deploiement-northflank.md). Ce guide décrit la cible **alternative** : un VPS Linux avec exécutable self-contained derrière Nginx.
 
 ## Prérequis
 

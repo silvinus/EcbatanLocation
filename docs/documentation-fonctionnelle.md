@@ -33,7 +33,7 @@ La reservation est l'entite centrale du systeme. Elle contient :
 
 ### Studio (Entite)
 
-Le catalogue des hebergements est fige :
+Catalogue initial des hebergements (modifiable par un admin : creation, suppression, et indicateur **Indisponible** pour retirer temporairement un studio du planning) :
 
 | Nom | Capacite | Cuisine | Louable seul |
 |-----|----------|---------|-------------|
@@ -63,15 +63,18 @@ Le catalogue des hebergements est fige :
 
 ### Capacite
 
-- Le nombre total de personnes (adultes + enfants) ne peut pas depasser la capacite du studio
-- Controle : `Adultes + Enfants <= Capacite`
+- Le nombre d'**adultes** ne peut pas depasser la capacite du studio
+- Les **enfants de moins de 3 ans ne comptent pas** dans la capacite
+- Controle : `Adultes <= Capacite`
 
 ### Studios dependants
 
-Un studio marque **"Non louable seul"** (Studio Centre, Mobil-home) ne peut etre reserve que conjointement avec un studio independant :
+Un studio marque **"Non louable seul"** (Studio Centre, Mobil-home) ne peut etre reserve qu'en etant **relie explicitement a une reservation parent** sur un studio independant :
 
-- Le meme proprietaire doit posseder une reservation sur un studio `LouableSeul = true`
-- Les dates doivent chevaucher (meme partiellement)
+- La reservation parent doit appartenir au **meme proprietaire** et porter sur un studio `RentableAlone = true`
+- Les dates du parent doivent **englober entierement** celles de la reservation dependante (inclusion stricte, pas simple chevauchement)
+- Le **statut du parent est propage** vers ses reservations dependantes
+- Une reservation parent ne peut pas etre elle-meme dependante (pas de chainage)
 
 ### Dates
 
@@ -176,6 +179,6 @@ Taux = Moyenne( PlacesOccupees(jour) / CapaciteTotale ) pour chaque jour de la p
 |------|-------|
 | Public (anonyme) | Consultation du planning en lecture seule |
 | Proprietaire | Creation, modification, suppression, changement de statut |
-| Admin | Gestion des tarifs et catalogue des studios |
+| Admin | Gestion de la grille tarifaire, des studios (CRUD) et des comptes proprietaires |
 
 Le role Admin est attribue a Christophe et a un compte technique de maintenance.

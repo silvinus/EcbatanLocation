@@ -145,7 +145,17 @@ Accessible depuis le bouton **Administration** dans l'en-tête, **réservé aux 
 ### Studios
 
 - Visualiser le catalogue des studios (capacité, cuisine, louable seul)
-- Le catalogue est figé dans la configuration initiale
+- **Créer** ou **supprimer** un studio
+- Marquer un studio **Indisponible** pour le retirer temporairement du planning
+
+### Comptes propriétaires
+
+- Gérer les comptes des propriétaires depuis l'onglet **Propriétaires**
+
+### Rapport
+
+- Générer un **rapport de réservations** avec calcul de prix, regroupé par propriétaire et par statut
+- **Exporter le rapport en PDF**
 
 ## Changer mon mot de passe
 
@@ -157,8 +167,8 @@ Le mot de passe doit contenir au moins **8 caractères, une majuscule, une minus
 
 - Un studio est **libre ou occupé** (pas de location partielle)
 - **Aucun chevauchement** de réservations sur un même studio
-- Un studio **non louable seul** ne peut être réservé que conjointement avec un studio indépendant
-- La capacité ne peut pas être dépassée (adultes + enfants ≤ capacité)
+- Un studio **non louable seul** doit être relié à une réservation parent (même propriétaire) sur un studio indépendant, dont les dates englobent entièrement celles de la réservation dépendante ; le statut du parent est propagé aux dépendantes
+- La capacité ne peut pas être dépassée — seuls les **adultes** comptent (les enfants de moins de 3 ans sont exclus)
 - Jour d'arrivée inclus, jour de départ exclu (logique nuitée)
 
 ## Hébergements disponibles
@@ -177,4 +187,4 @@ Le mot de passe doit contenir au moins **8 caractères, une majuscule, une minus
 
 Les 4 comptes propriétaires sont : Léa, Sarah, Jean, Christophe. Les identifiants sont fournis par l'administrateur système.
 
-Christophe dispose en plus du rôle **Admin** (accès à la grille tarifaire et au catalogue des studios). Un compte technique dédié possède également ce rôle pour la maintenance.
+Christophe dispose en plus du rôle **Admin** (gestion de la grille tarifaire, des studios et des comptes propriétaires). Un compte technique dédié possède également ce rôle pour la maintenance.

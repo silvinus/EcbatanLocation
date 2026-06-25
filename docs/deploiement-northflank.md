@@ -1,4 +1,12 @@
+---
+layout: default
+title: Deploiement Northflank
+nav_order: 6
+---
+
 # Déploiement sur Northflank — Ecbatan Location
+
+> Cible de déploiement **par défaut** (image Docker via GitHub Container Registry).
 
 ## Prérequis
 
