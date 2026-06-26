@@ -21,9 +21,25 @@ public class CreateReservationCommandHandler(
 
         var dates = new DateRange(request.StartDate, request.EndDate);
 
-        var overlapExists = await reservationRepository.ExistsOverlapAsync(
-            request.StudioId, dates, null, cancellationToken);
-        domainService.ValidateNoOverlap(overlapExists);
+        var requestedAdults = request.PersonLines.Sum(pl => pl.AdultCount);
+
+        // A hypothetical reservation is deliberately staked over an already-taken slot, so it skips
+        // the availability checks (overlap / beds-capacity) entirely.
+        if (!request.IsHypothetical)
+        {
+            if (studio.IsPerBed)
+            {
+                var overlapping = await reservationRepository.GetOverlappingByStudioAsync(
+                    request.StudioId, dates, null, cancellationToken);
+                domainService.ValidateBedAvailability(studio, request.BedCount, requestedAdults, overlapping);
+            }
+            else
+            {
+                var overlapExists = await reservationRepository.ExistsOverlapAsync(
+                    request.StudioId, dates, null, cancellationToken);
+                domainService.ValidateNoOverlap(overlapExists);
+            }
+        }
 
         Reservation? parent = null;
         if (!studio.RentableAlone)
@@ -51,7 +67,11 @@ public class CreateReservationCommandHandler(
             dates,
             request.TenantName,
             personLines,
-            studio.Capacity);
+            studio.Capacity,
+            studio.RentalMode,
+            studio.NumberOfBeds,
+            request.BedCount,
+            request.IsHypothetical);
 
         if (parent is not null)
         {

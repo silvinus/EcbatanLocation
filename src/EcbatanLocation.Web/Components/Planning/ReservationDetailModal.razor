@@ -39,6 +39,13 @@
                     <span class="label">Durée</span>
                     <span class="value">@Reservation.NumberOfDays nuit(s)</span>
                 </div>
+                @if (Reservation.BedCount > 0)
+                {
+                    <div class="detail-item">
+                        <span class="label">Lits réservés</span>
+                        <span class="value">@Reservation.BedCount lit(s)</span>
+                    </div>
+                }
                 <div class="detail-item" style="grid-column: 1 / -1">
                     <span class="label">Personnes</span>
                     <span class="value">
@@ -95,6 +102,10 @@
                     <span class="label">Statut</span>
                     <span class="value">
                         <span class="badge @GetStatusBadgeClass(Reservation.Status)">@GetStatusLabel(Reservation.Status)</span>
+                        @if (Reservation.IsHypothetical)
+                        {
+                            <span class="badge badge-hypothetical" style="margin-left:6px">Hypothétique</span>
+                        }
                     </span>
                 </div>
                 @if (Reservation.EstimatedAmount.HasValue)
@@ -155,10 +166,18 @@
                     </div>
                 }
 
+                @if (Reservation.IsHypothetical)
+                {
+                    <div class="hint" style="margin-bottom:10px">
+                        Réservation hypothétique : elle reste en « Demande » et ne peut être ni acceptée ni confirmée.
+                        Modifiez-la et décochez « hypothétique » pour la promouvoir (si le créneau le permet).
+                    </div>
+                }
+
                 <div class="detail-actions">
                     <button class="btn" @onclick="() => OnEdit.InvokeAsync(Reservation)">Modifier</button>
 
-                    @if (!Reservation.IsDependent)
+                    @if (!Reservation.IsDependent && !Reservation.IsHypothetical)
                     {
                         @if (Reservation.Status == ReservationStatus.Pending)
                         {

@@ -3,6 +3,7 @@ using System;
 using EcbatanLocation.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
 {
     [DbContext(typeof(EcbatanLocationDbContext))]
-    partial class EcbatanLocationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260625223510_AddPerBedRental")]
+    partial class AddPerBedRental
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -110,11 +113,6 @@ namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsHypothetical")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(false);
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");

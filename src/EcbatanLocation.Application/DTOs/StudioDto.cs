@@ -1,3 +1,5 @@
+using EcbatanLocation.Domain.Enums;
+
 namespace EcbatanLocation.Application.DTOs;
 
 public record StudioDto(
@@ -8,4 +10,6 @@ public record StudioDto(
     bool RentableAlone,
     bool Unavailable,
     int DisplayOrder,
-    bool HasReservations = false);
+    bool HasReservations = false,
+    RentalMode RentalMode = RentalMode.PerLodging,
+    int NumberOfBeds = 0);

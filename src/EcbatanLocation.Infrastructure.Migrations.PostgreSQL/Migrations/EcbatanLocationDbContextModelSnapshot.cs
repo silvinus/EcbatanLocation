@@ -101,6 +101,11 @@ namespace EcbatanLocation.Infrastructure.Migrations.PostgreSQL.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<int>("BedCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime?>("ConfirmedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -110,6 +115,11 @@ namespace EcbatanLocation.Infrastructure.Migrations.PostgreSQL.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsHypothetical")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
@@ -164,8 +174,20 @@ namespace EcbatanLocation.Infrastructure.Migrations.PostgreSQL.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("NumberOfBeds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
                     b.Property<bool>("RentableAlone")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("RentalMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("PerLodging");
 
                     b.Property<bool>("Unavailable")
                         .ValueGeneratedOnAdd()

@@ -34,11 +34,15 @@ else
             };
             var nights = res.EndDate.DayNumber - res.StartDate.DayNumber;
 
-            <div class="list-item booking @statusClass" @onclick="() => OnClick(res.Id)" style="position:relative">
+            <div class="list-item booking @statusClass @(res.IsHypothetical ? "hypothetical" : "")" @onclick="() => OnClick(res.Id)" style="position:relative">
                 <div class="list-item-main">
                     <div class="list-item-title">
                         <span class="who">@res.TenantName</span>
                         <span class="badge @statusClass">@statusLabel</span>
+                        @if (res.IsHypothetical)
+                        {
+                            <span class="badge badge-hypothetical">Hypothétique</span>
+                        }
                     </div>
                     <div class="list-item-details">
                         <span>@item.Studio.Name</span>

@@ -6,4 +6,4 @@ public record CheckOverlapQuery(
     Guid StudioId,
     DateOnly StartDate,
     DateOnly EndDate,
-    Guid? ExcludeReservationId = null) : IRequest<bool>;
+    Guid? ExcludeReservationId = null) : IRequest<OverlapCheckResult>;

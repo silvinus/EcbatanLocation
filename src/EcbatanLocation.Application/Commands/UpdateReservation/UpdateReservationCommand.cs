@@ -11,4 +11,6 @@ public record UpdateReservationCommand(
     DateOnly EndDate,
     string TenantName,
     IReadOnlyList<PersonLineDto> PersonLines,
-    Guid? ParentReservationId = null) : IRequest, IRequireAuthorization;
+    Guid? ParentReservationId = null,
+    int BedCount = 1,
+    bool IsHypothetical = false) : IRequest, IRequireAuthorization;

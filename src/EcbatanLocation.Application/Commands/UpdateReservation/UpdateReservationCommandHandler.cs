@@ -1,4 +1,5 @@
 using EcbatanLocation.Application.Messaging;
+using EcbatanLocation.Application.Services;
 using EcbatanLocation.Domain.Repositories;
 using EcbatanLocation.Domain.Services;
 using EcbatanLocation.Domain.ValueObjects;
@@ -8,7 +9,8 @@ namespace EcbatanLocation.Application.Commands.UpdateReservation;
 public class UpdateReservationCommandHandler(
     IReservationRepository reservationRepository,
     IStudioRepository studioRepository,
-    ReservationDomainService domainService) : IRequestHandler<UpdateReservationCommand>
+    ReservationDomainService domainService,
+    HypotheticalPromotionService promotionService) : IRequestHandler<UpdateReservationCommand>
 {
     public async Task Handle(UpdateReservationCommand request, CancellationToken cancellationToken)
     {
@@ -23,9 +25,31 @@ public class UpdateReservationCommandHandler(
 
         var dates = new DateRange(request.StartDate, request.EndDate);
 
-        var overlapExists = await reservationRepository.ExistsOverlapAsync(
-            request.StudioId, dates, request.ReservationId, cancellationToken);
-        domainService.ValidateNoOverlap(overlapExists);
+        // Snapshot the slot occupied before this edit: if it was a real reservation, moving or
+        // shrinking it (or unticking the hypothetical flag elsewhere) may free space for a hypothetical.
+        var freedByReal = !reservation.IsHypothetical;
+        var freedStudioId = reservation.StudioId;
+        var freedRange = reservation.Dates;
+
+        var requestedAdults = request.PersonLines.Sum(pl => pl.AdultCount);
+
+        // A hypothetical reservation skips the availability checks; a real one (including a hypothetical
+        // being promoted by unticking the flag) must still fit.
+        if (!request.IsHypothetical)
+        {
+            if (studio.IsPerBed)
+            {
+                var overlapping = await reservationRepository.GetOverlappingByStudioAsync(
+                    request.StudioId, dates, request.ReservationId, cancellationToken);
+                domainService.ValidateBedAvailability(studio, request.BedCount, requestedAdults, overlapping);
+            }
+            else
+            {
+                var overlapExists = await reservationRepository.ExistsOverlapAsync(
+                    request.StudioId, dates, request.ReservationId, cancellationToken);
+                domainService.ValidateNoOverlap(overlapExists);
+            }
+        }
 
         var hasDependents = await reservationRepository.HasDependentsAsync(reservation.Id, cancellationToken);
         if (hasDependents && (dates.StartDate != reservation.Dates.StartDate || dates.EndDate != reservation.Dates.EndDate))
@@ -60,8 +84,16 @@ public class UpdateReservationCommandHandler(
             dates,
             request.TenantName,
             personLines,
-            studio.Capacity);
+            studio.Capacity,
+            studio.RentalMode,
+            studio.NumberOfBeds,
+            request.BedCount,
+            request.IsHypothetical);
 
         await reservationRepository.UpdateAsync(reservation, cancellationToken);
+
+        // If a real reservation was moved/shrunk, a hypothetical staked over the vacated slot may now fit.
+        if (freedByReal)
+            await promotionService.PromoteFittingHypotheticalsAsync(freedStudioId, freedRange, cancellationToken);
     }
 }

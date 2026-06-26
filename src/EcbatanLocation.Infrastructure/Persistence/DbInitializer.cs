@@ -23,6 +23,38 @@ public static class DbInitializer
         await EnsureAdminsAsync(userManager);
         await SeedStudiosAsync(context);
         await SeedPricingGridAsync(context);
+        await BackfillPerBedBedCountsAsync(context);
+    }
+
+    /// <summary>
+    /// Idempotent: per-bed studios may carry legacy reservations created before the switch to
+    /// per-bed mode, with a bed count of 0. Give each its adult count (clamped to the studio's
+    /// beds, at least one) so the occupation KPI counts them. Runs on every startup; once fixed,
+    /// no reservation on a per-bed studio has a 0 bed count, so subsequent runs are no-ops.
+    /// </summary>
+    private static async Task BackfillPerBedBedCountsAsync(EcbatanLocationDbContext context)
+    {
+        var perBedStudios = await context.Studios
+            .Where(s => s.RentalMode == RentalMode.PerBed)
+            .Select(s => new { s.Id, s.NumberOfBeds })
+            .ToListAsync();
+
+        var changed = false;
+        foreach (var studio in perBedStudios)
+        {
+            var reservations = await context.Reservations
+                .Where(r => r.StudioId == studio.Id && r.BedCount == 0)
+                .ToListAsync();
+
+            foreach (var reservation in reservations)
+            {
+                reservation.BackfillBedCount(Math.Min(Math.Max(1, reservation.TotalAdultCount), studio.NumberOfBeds));
+                changed = true;
+            }
+        }
+
+        if (changed)
+            await context.SaveChangesAsync();
     }
 
     /// <summary>

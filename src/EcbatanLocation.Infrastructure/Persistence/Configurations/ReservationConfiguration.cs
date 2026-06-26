@@ -18,6 +18,8 @@ public class ReservationConfiguration : IEntityTypeConfiguration<Reservation>
         });
 
         builder.Property(r => r.TenantName).IsRequired().HasMaxLength(200);
+        builder.Property(r => r.BedCount).IsRequired().HasDefaultValue(0);
+        builder.Property(r => r.IsHypothetical).IsRequired().HasDefaultValue(false);
         builder.Property(r => r.Status).IsRequired().HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.AcceptedBy).HasMaxLength(200);
         builder.Property(r => r.ConfirmedBy).HasMaxLength(200);

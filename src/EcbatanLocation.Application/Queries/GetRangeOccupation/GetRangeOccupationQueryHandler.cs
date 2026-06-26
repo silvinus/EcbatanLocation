@@ -13,7 +13,7 @@ public class GetRangeOccupationQueryHandler(
     {
         var allStudios = await studioRepository.GetAllAsync(cancellationToken);
         var studios = allStudios.Where(s => !s.Unavailable).ToList();
-        var totalCapacity = studios.Sum(s => s.Capacity);
+        var totalCapacity = studios.Sum(s => s.OccupancyCapacity);
         var totalStudios = studios.Count;
 
         var days = 0;
@@ -24,13 +24,20 @@ public class GetRangeOccupationQueryHandler(
             days++;
             var reservations = await reservationRepository.GetByDateAsync(date, cancellationToken);
 
-            var occupiedStudioIds = reservations
+            var activeByStudio = reservations
                 .Where(r => r.Status is ReservationStatus.Accepted or ReservationStatus.Confirmed)
-                .Select(r => r.StudioId)
-                .Distinct()
-                .ToHashSet();
+                .GroupBy(r => r.StudioId)
+                .ToDictionary(g => g.Key, g => g.ToList());
 
-            totalOccupiedPlaces += studios.Where(s => occupiedStudioIds.Contains(s.Id)).Sum(s => s.Capacity);
+            foreach (var studio in studios)
+            {
+                if (!activeByStudio.TryGetValue(studio.Id, out var active))
+                    continue;
+
+                totalOccupiedPlaces += studio.IsPerBed
+                    ? Math.Min(active.Sum(r => r.BedCount), studio.NumberOfBeds)
+                    : studio.Capacity;
+            }
         }
 
         var avgOccupied = days > 0 ? (double)totalOccupiedPlaces / days : 0;

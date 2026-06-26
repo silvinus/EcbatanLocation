@@ -52,4 +52,66 @@ public class ReservationDomainService
         if (overlapExists)
             throw new OverlappingReservationException();
     }
+
+    /// <summary>
+    /// Per-bed availability rule. The candidate reservation can be accommodated only if,
+    /// across every reservation already overlapping the requested dates on the same studio,
+    /// the total reserved beds stay within <see cref="Studio.NumberOfBeds"/> and the total
+    /// people stay within <see cref="Studio.Capacity"/>.
+    /// </summary>
+    public void ValidateBedAvailability(
+        Studio studio,
+        int requestedBeds,
+        int requestedAdults,
+        IReadOnlyList<Reservation> overlappingReservations)
+    {
+        if (!studio.IsPerBed)
+            throw new InvalidOperationException(
+                "Bed availability can only be checked on a per-bed studio.");
+
+        if (requestedBeds < 1)
+            throw new NoBedsAvailableException("At least one bed must be reserved.");
+
+        if (requestedBeds > studio.NumberOfBeds)
+            throw new NoBedsAvailableException(
+                $"Requested {requestedBeds} bed(s) but the studio only has {studio.NumberOfBeds}.");
+
+        var usedBeds = overlappingReservations.Sum(r => r.BedCount);
+        if (usedBeds + requestedBeds > studio.NumberOfBeds)
+            throw new NoBedsAvailableException(
+                $"Only {studio.NumberOfBeds - usedBeds} bed(s) left for these dates, {requestedBeds} requested.");
+
+        var usedAdults = overlappingReservations.Sum(r => r.TotalAdultCount);
+        if (usedAdults + requestedAdults > studio.Capacity)
+            throw new NoBedsAvailableException(
+                $"Capacity exceeded: {usedAdults + requestedAdults} people for a capacity of {studio.Capacity}.");
+    }
+
+    /// <summary>
+    /// Non-throwing availability test used to decide whether a hypothetical reservation can be
+    /// promoted to a real one. <paramref name="realOverlaps"/> must contain only the real
+    /// (non-hypothetical) reservations overlapping the candidate's dates, excluding the candidate
+    /// itself. For a whole-lodging studio the candidate fits only when nothing else overlaps; for a
+    /// per-bed studio it fits when reserved beds and people stay within the studio's beds and capacity.
+    /// </summary>
+    public bool CanAccommodate(
+        Studio studio,
+        Reservation candidate,
+        IReadOnlyList<Reservation> realOverlaps)
+    {
+        if (studio.IsPerBed)
+        {
+            var usedBeds = realOverlaps.Sum(r => r.BedCount);
+            if (usedBeds + candidate.BedCount > studio.NumberOfBeds)
+                return false;
+
+            var usedAdults = realOverlaps.Sum(r => r.TotalAdultCount);
+            if (usedAdults + candidate.TotalAdultCount > studio.Capacity)
+                return false;
+
+            return true;
+        }
+
+        return realOverlaps.Count == 0;
+    }
 }

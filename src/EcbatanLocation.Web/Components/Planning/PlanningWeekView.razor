@@ -22,16 +22,16 @@
                 var isSelected = date == SelectedDate;
                 var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
                 var occ = GetOccupation(date);
-                <th class="day-col week-day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "")">
-                    <span class="day-header @(isToday ? "today" : "") @(isWeekend ? "weekend" : "")"
-                          @onclick="() => OnDayClicked(date)">
+                <th class="day-col week-day-col day-col-head @(isToday ? "today" : "") @(isSelected ? "selected" : "")"
+                    @onclick="() => OnDayClicked(date)"
+                    title="@(occ is not null ? $"{occ.AvailablePlaces} places libres sur {occ.TotalCapacity}" : null)">
+                    <span class="day-header @(isToday ? "today" : "") @(isWeekend ? "weekend" : "")">
                         @date.ToString("ddd", culture)<br/>@date.Day
                     </span>
                     @if (occ is not null)
                     {
                         <span class="day-occ"
-                              style="background:@OccupancyPalette.Color(occ)"
-                              title="@($"{occ.AvailablePlaces} places libres sur {occ.TotalCapacity}")"></span>
+                              style="background:@OccupancyPalette.Color(occ)"></span>
                     }
                 </th>
             }
