@@ -111,6 +111,12 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
     /// </summary>
     private async Task GuardNoOverlapAsync(Reservation reservation, CancellationToken ct)
     {
+        // A reservation being deleted vacates its slot, so availability rules don't apply to it.
+        // (Without this, deleting a hypothetical staked over a since-confirmed booking would be
+        // wrongly rejected by the confirmed-overlap check below.)
+        if (reservation.Status == ReservationStatus.Deleted)
+            return;
+
         var studio = await context.Studios.FindAsync([reservation.StudioId], ct);
 
         // Hypothetical reservations never occupy a slot, so they are excluded from the guard's counts.

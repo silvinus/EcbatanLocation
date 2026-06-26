@@ -94,6 +94,29 @@ public class HypotheticalReservationTests(IntegrationTestFixture fixture) : Inte
     }
 
     [Fact]
+    public async Task Delete_Hypothetical_AfterParentConfirmed_Succeeds()
+    {
+        var villa = await GetStudioAsync("Villa");
+        var owner = await GetOwnerAsync("Léa");
+
+        // The real reservation is still a request when the hypothetical is staked over it.
+        var realId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id, Start, End,
+            "Real", [new PersonLineDto(ClientType.Owner, 2, 0)]));
+        var hypoId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id, Start, End,
+            "Hypo", [new PersonLineDto(ClientType.Owner, 2, 0)], IsHypothetical: true));
+
+        // The real reservation is then accepted and confirmed.
+        await Mediator.Send(new AcceptReservationCommand(realId, "Léa"));
+        await Mediator.Send(new ConfirmReservationCommand(realId, "Léa"));
+
+        // Deleting the now-stale hypothetical must still be allowed even though it overlaps a confirmed slot.
+        await Mediator.Send(new DeleteReservationCommand(hypoId));
+
+        var repo = Services.GetRequiredService<IReservationRepository>();
+        Assert.Null(await repo.GetByIdAsync(hypoId));
+    }
+
+    [Fact]
     public async Task Accept_Hypothetical_Throws()
     {
         var villa = await GetStudioAsync("Villa");
