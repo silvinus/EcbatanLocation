@@ -21,11 +21,15 @@ public abstract class IntegrationTestBase : IClassFixture<IntegrationTestFixture
         Fixture = fixture;
     }
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
         _scope = Fixture.CreateScope();
-        AuthState.SetOwner();
-        return CleanReservationsAsync();
+        // Default identity: a real seeded owner (Léa), so reservation tests act as the owner of the
+        // reservations they create and pass the ownership authorization check. Tests that need a
+        // different actor override this with AuthState.SetOwner(...)/SetAdmin()/SetAnonymous().
+        var lea = await GetOwnerAsync("Léa");
+        AuthState.SetOwner(lea.UserId, lea.Name);
+        await CleanReservationsAsync();
     }
 
     public Task DisposeAsync()

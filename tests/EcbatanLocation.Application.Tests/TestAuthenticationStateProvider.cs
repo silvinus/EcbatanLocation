@@ -11,6 +11,18 @@ public sealed class TestAuthenticationStateProvider : AuthenticationStateProvide
     public void SetAdmin() => _user = CreateAdmin();
     public void SetAnonymous() => _user = new ClaimsPrincipal(new ClaimsIdentity());
 
+    /// <summary>
+    /// Impersonates a specific seeded owner: the <paramref name="userId"/> matches the Identity user
+    /// linked to an <c>Owner</c> record, so ownership checks resolve to that owner.
+    /// </summary>
+    public void SetOwner(string userId, string name)
+        => _user = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim(ClaimTypes.Name, name),
+            new Claim(ClaimTypes.Role, "Owner"),
+        ], "Test"));
+
     public override Task<AuthenticationState> GetAuthenticationStateAsync()
         => Task.FromResult(new AuthenticationState(_user));
 

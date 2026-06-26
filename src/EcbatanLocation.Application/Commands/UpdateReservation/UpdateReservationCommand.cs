@@ -13,4 +13,4 @@ public record UpdateReservationCommand(
     IReadOnlyList<PersonLineDto> PersonLines,
     Guid? ParentReservationId = null,
     int BedCount = 1,
-    bool IsHypothetical = false) : IRequest, IRequireAuthorization;
+    bool IsHypothetical = false) : IRequest, IRequireAuthorization, IRequireReservationOwnership;
