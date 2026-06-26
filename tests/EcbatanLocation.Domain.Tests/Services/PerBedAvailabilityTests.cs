@@ -169,4 +169,65 @@ public class PerBedAvailabilityTests
 
         Assert.False(_service.CanAccommodate(studio, candidate, existing));
     }
+
+    // --- ValidateHypotheticalAllowed: a hypothetical may be staked only if it fits once the
+    // overlapping non-confirmed bookings are set aside, alongside the confirmed ones alone. ---
+
+    [Fact]
+    public void ValidateHypotheticalAllowed_PerLodging_NoConfirmedOverlap_Passes()
+    {
+        var studio = LodgingStudio();
+
+        _service.ValidateHypotheticalAllowed(studio, requestedBeds: 0, requestedAdults: 2, []);
+    }
+
+    [Fact]
+    public void ValidateHypotheticalAllowed_PerLodging_ConfirmedOverlap_Throws()
+    {
+        var studio = LodgingStudio();
+        var confirmed = new[] { LodgingReservation(studio) };
+
+        Assert.Throws<ConfirmedReservationConflictException>(() =>
+            _service.ValidateHypotheticalAllowed(studio, requestedBeds: 0, requestedAdults: 2, confirmed));
+    }
+
+    [Fact]
+    public void ValidateHypotheticalAllowed_PerBed_NoConfirmedOverlap_Passes()
+    {
+        var studio = PerBedStudio(capacity: 4, beds: 4);
+
+        _service.ValidateHypotheticalAllowed(studio, requestedBeds: 2, requestedAdults: 2, []);
+    }
+
+    [Fact]
+    public void ValidateHypotheticalAllowed_PerBed_FitsWithinBedsLeftByConfirmed_Passes()
+    {
+        // 4 beds, confirmed holds 1 → 3 left, a 2-bed hypothetical fits.
+        var studio = PerBedStudio(capacity: 4, beds: 4);
+        var confirmed = new[] { BedReservation(studio, beds: 1, adults: 1) };
+
+        _service.ValidateHypotheticalAllowed(studio, requestedBeds: 2, requestedAdults: 2, confirmed);
+    }
+
+    [Fact]
+    public void ValidateHypotheticalAllowed_PerBed_ExceedsBedsLeftByConfirmed_Throws()
+    {
+        // 4 beds, confirmed holds 3 → 1 left, a 2-bed hypothetical does not fit.
+        var studio = PerBedStudio(capacity: 8, beds: 4);
+        var confirmed = new[] { BedReservation(studio, beds: 3, adults: 1) };
+
+        Assert.Throws<ConfirmedReservationConflictException>(() =>
+            _service.ValidateHypotheticalAllowed(studio, requestedBeds: 2, requestedAdults: 1, confirmed));
+    }
+
+    [Fact]
+    public void ValidateHypotheticalAllowed_PerBed_ExceedsCapacityLeftByConfirmed_Throws()
+    {
+        // Beds fit (1 + 1 <= 4) but people don't (3 + 2 > 4).
+        var studio = PerBedStudio(capacity: 4, beds: 4);
+        var confirmed = new[] { BedReservation(studio, beds: 1, adults: 3) };
+
+        Assert.Throws<ConfirmedReservationConflictException>(() =>
+            _service.ValidateHypotheticalAllowed(studio, requestedBeds: 1, requestedAdults: 2, confirmed));
+    }
 }

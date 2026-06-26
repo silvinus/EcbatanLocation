@@ -94,6 +94,56 @@ public class PerBedReservationRepositoryTests : IDisposable
                 [new PersonLine(ClientType.Owner, 2, 0)], studio.Capacity)));
     }
 
+    private static Reservation HypotheticalBedReservation(Studio studio, int beds, int adults)
+        => Reservation.Create(
+            studio.Id, Guid.NewGuid(), July(), "Hypo",
+            [new PersonLine(ClientType.Owner, adults, 0)],
+            studio.Capacity, studio.RentalMode, studio.NumberOfBeds, beds, isHypothetical: true);
+
+    [Fact]
+    public async Task PerBed_Hypothetical_OverConfirmedFillingBeds_Throws()
+    {
+        var studio = SeedPerBedStudio(); // 4 beds
+
+        await using var ctx = _factory.CreateContext();
+        ctx.Studios.Add(studio);
+        await ctx.SaveChangesAsync();
+
+        var repo = new ReservationRepository(ctx);
+
+        var confirmed = BedReservation(studio, beds: 3, adults: 1);
+        confirmed.Accept("admin");
+        confirmed.Confirm("admin");
+        await repo.AddAsync(confirmed);
+
+        // Only 1 bed remains once the confirmed booking is set aside: a 2-bed hypothetical can't be staked.
+        await Assert.ThrowsAsync<ConfirmedReservationConflictException>(
+            () => repo.AddAsync(HypotheticalBedReservation(studio, beds: 2, adults: 1)));
+    }
+
+    [Fact]
+    public async Task PerBed_Hypothetical_FitsOverConfirmed_IsAllowed()
+    {
+        var studio = SeedPerBedStudio(); // 4 beds, capacity 4
+
+        await using var ctx = _factory.CreateContext();
+        ctx.Studios.Add(studio);
+        await ctx.SaveChangesAsync();
+
+        var repo = new ReservationRepository(ctx);
+
+        var confirmed = BedReservation(studio, beds: 1, adults: 1);
+        confirmed.Accept("admin");
+        confirmed.Confirm("admin");
+        await repo.AddAsync(confirmed);
+
+        // 3 beds remain once the confirmed booking is set aside, so a 2-bed hypothetical fits.
+        var hypo = HypotheticalBedReservation(studio, beds: 2, adults: 2);
+        await repo.AddAsync(hypo);
+
+        Assert.True((await ctx.Reservations.FindAsync(hypo.Id))!.IsHypothetical);
+    }
+
     [Fact]
     public async Task BackfillBedCount_SetsAdultsClampedToBeds_OnlyForZeroBedCount()
     {
