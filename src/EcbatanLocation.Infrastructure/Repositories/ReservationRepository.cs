@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using EcbatanLocation.Domain.Entities;
+using EcbatanLocation.Domain.Enums;
 using EcbatanLocation.Domain.Exceptions;
 using EcbatanLocation.Domain.Repositories;
 using EcbatanLocation.Domain.ValueObjects;
@@ -110,10 +111,6 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
     /// </summary>
     private async Task GuardNoOverlapAsync(Reservation reservation, CancellationToken ct)
     {
-        // A hypothetical reservation is deliberately allowed to overlap existing bookings.
-        if (reservation.IsHypothetical)
-            return;
-
         var studio = await context.Studios.FindAsync([reservation.StudioId], ct);
 
         // Hypothetical reservations never occupy a slot, so they are excluded from the guard's counts.
@@ -121,6 +118,28 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
             .Where(r => r.StudioId == reservation.StudioId && r.Id != reservation.Id && !r.IsHypothetical)
             .Where(r => r.Dates.StartDate < reservation.Dates.EndDate && r.Dates.EndDate > reservation.Dates.StartDate)
             .ToListAsync(ct);
+
+        // A hypothetical is deliberately allowed to overlap not-yet-confirmed bookings, but it may
+        // never be staked over a confirmed reservation: it must still fit alongside the confirmed
+        // overlaps alone (authoritative re-check closing the TOCTOU race with the UI pre-check).
+        if (reservation.IsHypothetical)
+        {
+            var confirmed = overlapping.Where(r => r.Status == ReservationStatus.Confirmed).ToList();
+            if (studio is not null && studio.IsPerBed)
+            {
+                var confirmedBeds = confirmed.Sum(r => r.BedCount);
+                var confirmedAdults = confirmed.Sum(r => r.TotalAdultCount);
+                if (confirmedBeds + reservation.BedCount > studio.NumberOfBeds
+                    || confirmedAdults + reservation.TotalAdultCount > studio.Capacity)
+                    throw new ConfirmedReservationConflictException();
+            }
+            else if (confirmed.Count > 0)
+            {
+                throw new ConfirmedReservationConflictException();
+            }
+
+            return;
+        }
 
         if (studio is not null && studio.IsPerBed)
         {

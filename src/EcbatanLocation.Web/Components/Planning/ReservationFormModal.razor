@@ -26,6 +26,12 @@
                     }
                 </div>
             }
+            else if (_isHypothetical && HypotheticalBlocked)
+            {
+                <div class="alert-error">
+                    ⚠ Impossible de poser une réservation hypothétique sur ce créneau : il est déjà occupé par une réservation confirmée. Une hypothétique ne peut être posée que sur une demande ou une acceptation non confirmée.
+                </div>
+            }
             else if (_overlapWarning && _isHypothetical)
             {
                 <div class="alert-info">
@@ -240,8 +246,26 @@
     private bool _isHypothetical;
     private int _bedCount = 1;
 
-    // A hypothetical reservation is deliberately allowed to overlap, so availability never blocks saving.
-    private bool BlocksSave => _overlapWarning && !_isHypothetical;
+    // A hypothetical reservation is deliberately allowed to overlap not-yet-confirmed bookings, so
+    // availability does not block saving — except when the slot is held by a confirmed reservation,
+    // over which a hypothetical may not be staked.
+    private bool BlocksSave => (_overlapWarning && !_isHypothetical) || (_isHypothetical && HypotheticalBlocked);
+
+    // True when ticking "hypothetical" would still collide with a confirmed reservation, which the
+    // backend rejects. For a per-bed studio it must fit within what the confirmed bookings leave free.
+    private bool HypotheticalBlocked
+    {
+        get
+        {
+            if (_availability is null)
+                return false;
+
+            return _availability.IsPerBed
+                ? RequestedBeds > _availability.AvailableBedsOverConfirmed
+                  || _personLines.Sum(l => l.AdultCount) > _availability.AvailableCapacityOverConfirmed
+                : _availability.HasConfirmedConflict;
+        }
+    }
     private EcbatanLocation.Application.Queries.CheckOverlap.OverlapCheckResult? _availability;
     private int _availableBeds;
     private int _availableCapacity;

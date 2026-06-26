@@ -54,6 +54,39 @@ public class ReservationDomainService
     }
 
     /// <summary>
+    /// A hypothetical reservation is staked over not-yet-confirmed bookings, betting they fall
+    /// through. It may therefore be placed only if it would still fit once every overlapping
+    /// non-confirmed reservation is set aside — i.e. it must fit alongside the confirmed
+    /// reservations alone. <paramref name="confirmedOverlaps"/> must contain only the confirmed
+    /// reservations overlapping the candidate's dates on the same studio (Pending/Accepted ones
+    /// are excluded). For a whole-lodging studio this means no confirmed reservation may overlap;
+    /// for a per-bed studio the requested beds and people must fit within what the confirmed
+    /// reservations leave free.
+    /// </summary>
+    public void ValidateHypotheticalAllowed(
+        Studio studio,
+        int requestedBeds,
+        int requestedAdults,
+        IReadOnlyList<Reservation> confirmedOverlaps)
+    {
+        bool fits;
+        if (studio.IsPerBed)
+        {
+            var usedBeds = confirmedOverlaps.Sum(r => r.BedCount);
+            var usedAdults = confirmedOverlaps.Sum(r => r.TotalAdultCount);
+            fits = usedBeds + requestedBeds <= studio.NumberOfBeds
+                   && usedAdults + requestedAdults <= studio.Capacity;
+        }
+        else
+        {
+            fits = confirmedOverlaps.Count == 0;
+        }
+
+        if (!fits)
+            throw new ConfirmedReservationConflictException();
+    }
+
+    /// <summary>
     /// Per-bed availability rule. The candidate reservation can be accommodated only if,
     /// across every reservation already overlapping the requested dates on the same studio,
     /// the total reserved beds stay within <see cref="Studio.NumberOfBeds"/> and the total

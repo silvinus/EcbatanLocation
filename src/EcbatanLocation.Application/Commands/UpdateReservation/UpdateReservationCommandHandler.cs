@@ -1,5 +1,6 @@
 using EcbatanLocation.Application.Messaging;
 using EcbatanLocation.Application.Services;
+using EcbatanLocation.Domain.Enums;
 using EcbatanLocation.Domain.Repositories;
 using EcbatanLocation.Domain.Services;
 using EcbatanLocation.Domain.ValueObjects;
@@ -33,8 +34,9 @@ public class UpdateReservationCommandHandler(
 
         var requestedAdults = request.PersonLines.Sum(pl => pl.AdultCount);
 
-        // A hypothetical reservation skips the availability checks; a real one (including a hypothetical
-        // being promoted by unticking the flag) must still fit.
+        // A hypothetical reservation skips the regular availability checks but may only be staked over
+        // a not-yet-confirmed booking; a real one (including a hypothetical being promoted by unticking
+        // the flag) must still fit.
         if (!request.IsHypothetical)
         {
             if (studio.IsPerBed)
@@ -49,6 +51,13 @@ public class UpdateReservationCommandHandler(
                     request.StudioId, dates, request.ReservationId, cancellationToken);
                 domainService.ValidateNoOverlap(overlapExists);
             }
+        }
+        else
+        {
+            var overlapping = await reservationRepository.GetOverlappingByStudioAsync(
+                request.StudioId, dates, request.ReservationId, cancellationToken);
+            var confirmedOverlaps = overlapping.Where(r => r.Status == ReservationStatus.Confirmed).ToList();
+            domainService.ValidateHypotheticalAllowed(studio, request.BedCount, requestedAdults, confirmedOverlaps);
         }
 
         var hasDependents = await reservationRepository.HasDependentsAsync(reservation.Id, cancellationToken);

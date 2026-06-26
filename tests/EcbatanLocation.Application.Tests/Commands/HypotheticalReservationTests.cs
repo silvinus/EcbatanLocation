@@ -1,9 +1,11 @@
 using EcbatanLocation.Application.Commands.AcceptReservation;
+using EcbatanLocation.Application.Commands.ConfirmReservation;
 using EcbatanLocation.Application.Commands.CreateReservation;
 using EcbatanLocation.Application.Commands.DeleteReservation;
 using EcbatanLocation.Application.Commands.UpdateReservation;
 using EcbatanLocation.Application.DTOs;
 using EcbatanLocation.Domain.Enums;
+using EcbatanLocation.Domain.Exceptions;
 using EcbatanLocation.Domain.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,6 +34,63 @@ public class HypotheticalReservationTests(IntegrationTestFixture fixture) : Inte
         Assert.NotNull(hypo);
         Assert.True(hypo.IsHypothetical);
         Assert.Equal(ReservationStatus.Pending, hypo.Status);
+    }
+
+    [Fact]
+    public async Task Create_Hypothetical_OverConfirmedLodging_Throws()
+    {
+        var villa = await GetStudioAsync("Villa");
+        var owner = await GetOwnerAsync("Léa");
+
+        var realId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id, Start, End,
+            "Real", [new PersonLineDto(ClientType.Owner, 2, 0)]));
+        await Mediator.Send(new AcceptReservationCommand(realId, "Léa"));
+        await Mediator.Send(new ConfirmReservationCommand(realId, "Léa"));
+
+        // The slot is now confirmed: a hypothetical can no longer be staked over it.
+        await Assert.ThrowsAsync<ConfirmedReservationConflictException>(() =>
+            Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id, Start, End,
+                "Hypo", [new PersonLineDto(ClientType.Owner, 2, 0)], IsHypothetical: true)));
+    }
+
+    [Fact]
+    public async Task Create_Hypothetical_OverAcceptedLodging_Succeeds()
+    {
+        var villa = await GetStudioAsync("Villa");
+        var owner = await GetOwnerAsync("Léa");
+
+        var realId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id, Start, End,
+            "Real", [new PersonLineDto(ClientType.Owner, 2, 0)]));
+        await Mediator.Send(new AcceptReservationCommand(realId, "Léa"));
+
+        // Accepted but not confirmed: a hypothetical may still be staked over it.
+        var hypoId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id, Start, End,
+            "Hypo", [new PersonLineDto(ClientType.Owner, 2, 0)], IsHypothetical: true));
+
+        var repo = Services.GetRequiredService<IReservationRepository>();
+        Assert.True((await repo.GetByIdAsync(hypoId))!.IsHypothetical);
+    }
+
+    [Fact]
+    public async Task Update_HypotheticalOntoConfirmedSlot_Throws()
+    {
+        var villa = await GetStudioAsync("Villa");
+        var owner = await GetOwnerAsync("Léa");
+
+        var realId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id, Start, End,
+            "Real", [new PersonLineDto(ClientType.Owner, 2, 0)]));
+        await Mediator.Send(new AcceptReservationCommand(realId, "Léa"));
+        await Mediator.Send(new ConfirmReservationCommand(realId, "Léa"));
+
+        // A hypothetical posted elsewhere, then moved onto the confirmed slot, must be rejected.
+        var laterStart = End.AddDays(2);
+        var laterEnd = laterStart.AddDays(5);
+        var hypoId = await Mediator.Send(new CreateReservationCommand(villa.Id, owner.Id, laterStart, laterEnd,
+            "Hypo", [new PersonLineDto(ClientType.Owner, 2, 0)], IsHypothetical: true));
+
+        await Assert.ThrowsAsync<ConfirmedReservationConflictException>(() =>
+            Mediator.Send(new UpdateReservationCommand(hypoId, villa.Id, Start, End,
+                "Hypo", [new PersonLineDto(ClientType.Owner, 2, 0)], IsHypothetical: true)));
     }
 
     [Fact]
