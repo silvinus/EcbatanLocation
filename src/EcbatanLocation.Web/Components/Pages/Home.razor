@@ -130,7 +130,9 @@
 {
     <ReservationDetailModal Reservation="@_selectedReservation"
                             IsAuthenticated="@_isAuthenticated"
-                            CurrentOwnerName="@_currentOwner?.Name"
+                            IsAdmin="@_isAdmin"
+                            CurrentOwnerId="@_currentOwner?.Id"
+                            CurrentOwnerName="@ActorName"
                             OnClose="CloseDetailModal"
                             OnEdit="OpenEditModal"
                             OnDelete="OpenDeleteModal"
