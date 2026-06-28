@@ -10,8 +10,9 @@
     {
       "name": "web-sqlite",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "src/EcbatanLocation.Web", "--no-launch-profile", "--", "--DatabaseProvider=Sqlite", "--ConnectionStrings:DefaultConnection=Data Source=preview.db", "--urls=http://localhost:5180"],
-      "port": 5180
+      "runtimeArgs": ["run", "--project", "src/EcbatanLocation.Web", "--no-launch-profile", "--", "--environment=Development", "--DatabaseProvider=Sqlite", "--ConnectionStrings:DefaultConnection=Data Source=preview.db", "--urls=http://localhost:5180"],
+      "port": 5180,
+      "env": { "ASPNETCORE_ENVIRONMENT": "Development" }
     }
   ]
 }
