@@ -12,3 +12,12 @@ window.themeInterop = {
         };
     }
 };
+
+window.newsInterop = {
+    isCollapsed: function () {
+        return localStorage.getItem('app-news-collapsed') === '1';
+    },
+    setCollapsed: function (collapsed) {
+        localStorage.setItem('app-news-collapsed', collapsed ? '1' : '0');
+    }
+};
