@@ -55,6 +55,20 @@
                     }
                 </div>
 
+                @if (IsAdmin && !IsEdit)
+                {
+                    <div class="field">
+                        <label>Propriétaire</label>
+                        <select value="@_selectedOwnerId" @onchange="OnOwnerChanged">
+                            @foreach (var o in Owners)
+                            {
+                                <option value="@o.Id">@o.Name</option>
+                            }
+                        </select>
+                        <div class="field-hint">En tant qu'administrateur, vous créez cette réservation au nom de ce propriétaire.</div>
+                    </div>
+                }
+
                 <div class="row">
                     <div class="field">
                         <label>Date d'arrivée</label>
@@ -227,6 +241,8 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<StudioDto> Studios { get; set; } = [];
     [Parameter, EditorRequired] public Guid CurrentOwnerId { get; set; }
+    [Parameter] public IReadOnlyList<OwnerDto> Owners { get; set; } = [];
+    [Parameter] public bool IsAdmin { get; set; }
     [Parameter] public ReservationDetailDto? EditReservation { get; set; }
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -245,6 +261,10 @@
     private bool _checkingOverlap;
     private bool _isHypothetical;
     private int _bedCount = 1;
+
+    // Owner the reservation is created for. A regular owner only ever creates for themselves
+    // (CurrentOwnerId); an admin — who has no owner record of their own — picks the owner explicitly.
+    private Guid _selectedOwnerId;
 
     // A hypothetical reservation is deliberately allowed to overlap not-yet-confirmed bookings, so
     // availability does not block saving — except when the slot is held by a confirmed reservation,
@@ -295,6 +315,21 @@
         public ClientType ClientType { get; set; } = clientType;
         public int AdultCount { get; set; } = adultCount;
         public int ChildrenCount { get; set; } = childrenCount;
+    }
+
+    protected override void OnInitialized()
+    {
+        // Default the owner to the signed-in owner; for an admin without an owner record, fall back
+        // to the first owner so the selector always has a valid value.
+        _selectedOwnerId = CurrentOwnerId != Guid.Empty
+            ? CurrentOwnerId
+            : Owners.FirstOrDefault()?.Id ?? Guid.Empty;
+    }
+
+    private void OnOwnerChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+            _selectedOwnerId = id;
     }
 
     protected override void OnParametersSet()
@@ -611,6 +646,12 @@
                 return;
             }
 
+            if (!IsEdit && _selectedOwnerId == Guid.Empty)
+            {
+                _errorMessage = "Veuillez sélectionner un propriétaire.";
+                return;
+            }
+
             var personLineDtos = _personLines
                 .Where(l => l.AdultCount > 0 || l.ChildrenCount > 0)
                 .Select(l => new PersonLineDto(l.ClientType, l.AdultCount, l.ChildrenCount))
@@ -627,7 +668,7 @@
             else
             {
                 await Mediator.Send(new EcbatanLocation.Application.Commands.CreateReservation.CreateReservationCommand(
-                    studioId, CurrentOwnerId, _startDate, _endDate,
+                    studioId, _selectedOwnerId, _startDate, _endDate,
                     _tenantName.Trim(), personLineDtos, _parentReservationId, bedCount, _isHypothetical));
             }
 

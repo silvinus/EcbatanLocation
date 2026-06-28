@@ -144,6 +144,8 @@
 {
     <ReservationFormModal Studios="@(_studios ?? [])"
                           CurrentOwnerId="@(_currentOwner?.Id ?? Guid.Empty)"
+                          Owners="@(_owners ?? [])"
+                          IsAdmin="@_isAdmin"
                           EditReservation="@_editingReservation"
                           OnSaved="OnFormSaved"
                           OnCancel="CloseFormModal" />
