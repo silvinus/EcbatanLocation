@@ -67,7 +67,7 @@ public class GetReservationDetailQueryHandler(
         return new ReservationDetailDto(
             reservation.Id,
             studio is not null
-                ? new StudioDto(studio.Id, studio.Name, studio.Capacity, studio.HasKitchen, studio.RentableAlone, studio.Unavailable, studio.DisplayOrder)
+                ? new StudioDto(studio.Id, studio.Name, studio.Capacity, studio.HasKitchen, studio.RentableAlone, studio.Unavailable, studio.DisplayOrder, false, studio.RentalMode, studio.NumberOfBeds)
                 : new StudioDto(reservation.StudioId, "Unknown", 0, false, false, false, 0),
             owner is not null
                 ? new OwnerDto(owner.Id, owner.Name)
@@ -88,6 +88,8 @@ public class GetReservationDetailQueryHandler(
             reservation.ParentReservationId,
             parentStudioName,
             parentTenantName,
-            dependentDtos);
+            dependentDtos,
+            reservation.BedCount,
+            reservation.IsHypothetical);
     }
 }

@@ -96,6 +96,11 @@ namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("BedCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
                     b.Property<DateTime?>("ConfirmedAt")
                         .HasColumnType("TEXT");
 
@@ -105,6 +110,11 @@ namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsHypothetical")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
 
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("TEXT");
@@ -159,8 +169,20 @@ namespace EcbatanLocation.Infrastructure.Migrations.Sqlite.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("NumberOfBeds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
                     b.Property<bool>("RentableAlone")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("RentalMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("PerLodging");
 
                     b.Property<bool>("Unavailable")
                         .ValueGeneratedOnAdd()

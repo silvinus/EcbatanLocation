@@ -247,4 +247,60 @@ public class ReservationTests
 
         Assert.Equal(ReservationStatus.Confirmed, reservation.Status);
     }
+
+    private static Reservation CreateHypothetical()
+    {
+        var lines = new[] { new PersonLine(ClientType.Acquaintance, 2, 0) };
+        return Reservation.Create(StudioId, OwnerId, Dates, "Dupont", lines, 6, isHypothetical: true);
+    }
+
+    [Fact]
+    public void Create_Hypothetical_FlagSetAndStaysPending()
+    {
+        var reservation = CreateHypothetical();
+
+        Assert.True(reservation.IsHypothetical);
+        Assert.Equal(ReservationStatus.Pending, reservation.Status);
+    }
+
+    [Fact]
+    public void Accept_Hypothetical_Throws()
+    {
+        var reservation = CreateHypothetical();
+
+        Assert.Throws<InvalidOperationException>(() => reservation.Accept("Jean"));
+    }
+
+    [Fact]
+    public void Confirm_Hypothetical_Throws()
+    {
+        var reservation = CreateHypothetical();
+
+        Assert.Throws<InvalidOperationException>(() => reservation.Confirm("Jean"));
+    }
+
+    [Fact]
+    public void PromoteFromHypothetical_ClearsFlag_AndAllowsAccept()
+    {
+        var reservation = CreateHypothetical();
+
+        reservation.PromoteFromHypothetical();
+
+        Assert.False(reservation.IsHypothetical);
+        Assert.NotNull(reservation.UpdatedAt);
+
+        reservation.Accept("Jean");
+        Assert.Equal(ReservationStatus.Accepted, reservation.Status);
+    }
+
+    [Fact]
+    public void Update_CanToggleHypotheticalFlag()
+    {
+        var reservation = CreateHypothetical();
+        var lines = new[] { new PersonLine(ClientType.Acquaintance, 2, 0) };
+
+        reservation.Update(Dates, "Dupont", lines, 6, isHypothetical: false);
+
+        Assert.False(reservation.IsHypothetical);
+    }
 }

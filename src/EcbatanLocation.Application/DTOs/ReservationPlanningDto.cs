@@ -12,4 +12,6 @@ public record ReservationPlanningDto(
     ReservationStatus Status,
     IReadOnlyList<PersonLineDto> PersonLines,
     Guid? ParentReservationId = null,
-    int LinkGroupIndex = -1);
+    int LinkGroupIndex = -1,
+    int BedCount = 0,
+    bool IsHypothetical = false);

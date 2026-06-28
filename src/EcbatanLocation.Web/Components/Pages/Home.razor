@@ -130,7 +130,9 @@
 {
     <ReservationDetailModal Reservation="@_selectedReservation"
                             IsAuthenticated="@_isAuthenticated"
-                            CurrentOwnerName="@_currentOwner?.Name"
+                            IsAdmin="@_isAdmin"
+                            CurrentOwnerId="@_currentOwner?.Id"
+                            CurrentOwnerName="@ActorName"
                             OnClose="CloseDetailModal"
                             OnEdit="OpenEditModal"
                             OnDelete="OpenDeleteModal"
@@ -142,6 +144,8 @@
 {
     <ReservationFormModal Studios="@(_studios ?? [])"
                           CurrentOwnerId="@(_currentOwner?.Id ?? Guid.Empty)"
+                          Owners="@(_owners ?? [])"
+                          IsAdmin="@_isAdmin"
                           EditReservation="@_editingReservation"
                           OnSaved="OnFormSaved"
                           OnCancel="CloseFormModal" />

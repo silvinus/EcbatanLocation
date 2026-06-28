@@ -56,14 +56,18 @@ else
                         };
                         var nights = res.EndDate.DayNumber - res.StartDate.DayNumber;
 
-                        <div class="agenda-card booking @statusClass"
+                        <div class="agenda-card booking @statusClass @(res.IsHypothetical ? "hypothetical" : "")"
                              role="button" tabindex="0"
                              @onclick="() => OnClick(res.Id)"
                              @onkeydown="(e) => OnKeyDown(e, res.Id)"
-                             aria-label="@($"Réservation {res.TenantName}, {item.Studio.Name}, statut {statusLabel}")">
+                             aria-label="@($"Réservation {res.TenantName}, {item.Studio.Name}, statut {statusLabel}{(res.IsHypothetical ? ", hypothétique" : "")}")">
                             <div class="agenda-card-head">
                                 <span class="who">@res.TenantName</span>
                                 <span class="badge @statusClass">@statusLabel</span>
+                                @if (res.IsHypothetical)
+                                {
+                                    <span class="badge badge-hypothetical">Hypothétique</span>
+                                }
                             </div>
                             <div class="agenda-card-meta">
                                 <span class="studio">@item.Studio.Name</span>

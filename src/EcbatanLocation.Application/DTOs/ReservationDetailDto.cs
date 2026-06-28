@@ -22,7 +22,9 @@ public record ReservationDetailDto(
     Guid? ParentReservationId = null,
     string? ParentStudioName = null,
     string? ParentTenantName = null,
-    IReadOnlyList<DependentReservationSummaryDto>? Dependents = null)
+    IReadOnlyList<DependentReservationSummaryDto>? Dependents = null,
+    int BedCount = 0,
+    bool IsHypothetical = false)
 {
     public bool IsDependent => ParentReservationId.HasValue;
 }

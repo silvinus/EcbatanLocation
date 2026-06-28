@@ -36,7 +36,13 @@ public partial class Home : IDisposable
     private ReservationDetailDto? _selectedReservation;
 
     private bool _isAuthenticated;
+    private bool _isAdmin;
     private OwnerDto? _currentOwner;
+    private string? _currentUserName;
+
+    // Name recorded as the actor on accept/confirm: the owner's name when available, otherwise the
+    // signed-in identity (an admin may act without having an owner record).
+    private string? ActorName => _currentOwner?.Name ?? _currentUserName;
 
     private bool _showFormModal;
     private ReservationDetailDto? _editingReservation;
@@ -127,6 +133,8 @@ public partial class Home : IDisposable
         if (AuthState is null) return;
         var state = await AuthState;
         _isAuthenticated = state.User.Identity?.IsAuthenticated == true;
+        _isAdmin = state.User.IsInRole("Admin");
+        _currentUserName = state.User.Identity?.Name;
 
         if (_isAuthenticated)
         {

@@ -17,7 +17,9 @@ public class CreateStudioCommandHandler(
             request.HasKitchen,
             request.RentableAlone,
             maxOrder + 1,
-            request.Unavailable);
+            request.Unavailable,
+            request.RentalMode,
+            request.NumberOfBeds);
 
         await studioRepository.AddAsync(studio, cancellationToken);
     }

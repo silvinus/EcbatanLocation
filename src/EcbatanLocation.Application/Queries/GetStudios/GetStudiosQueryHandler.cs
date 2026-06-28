@@ -15,7 +15,7 @@ public class GetStudiosQueryHandler(
 
         return studios
             .OrderBy(s => s.DisplayOrder)
-            .Select(s => new StudioDto(s.Id, s.Name, s.Capacity, s.HasKitchen, s.RentableAlone, s.Unavailable, s.DisplayOrder, studioIdsWithReservations.Contains(s.Id)))
+            .Select(s => new StudioDto(s.Id, s.Name, s.Capacity, s.HasKitchen, s.RentableAlone, s.Unavailable, s.DisplayOrder, studioIdsWithReservations.Contains(s.Id), s.RentalMode, s.NumberOfBeds))
             .ToList();
     }
 }

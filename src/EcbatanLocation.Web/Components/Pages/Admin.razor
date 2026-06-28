@@ -123,6 +123,7 @@
                             <tr>
                                 <th>Nom</th>
                                 <th>Capacité</th>
+                                <th>Location</th>
                                 <th>Cuisine</th>
                                 <th>Louable seul</th>
                                 <th>Statut</th>
@@ -135,6 +136,16 @@
                                 <tr class="@(s.Unavailable ? "row-unavailable" : "")">
                                     <td><b>@s.Name</b></td>
                                     <td>@s.Capacity pers.</td>
+                                    <td>
+                                        @if (s.RentalMode == RentalMode.PerBed)
+                                        {
+                                            <span class="badge st-accepted">Au lit (@s.NumberOfBeds)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge">Logement</span>
+                                        }
+                                    </td>
                                     <td>
                                         <span class="badge @(s.HasKitchen ? "st-confirmed" : "")">
                                             @(s.HasKitchen ? "Oui" : "Non")
@@ -453,6 +464,25 @@
                             </label>
                         </div>
                     </div>
+                    <div class="field">
+                        <label>Mode de location</label>
+                        <div class="detail-actions">
+                            <label class="checkbox-label">
+                                <input type="checkbox" @bind="_studioFormPerBed" /> Louer au lit (plusieurs réservations simultanées)
+                            </label>
+                        </div>
+                        <div class="field-hint">
+                            Décoché : le logement se loue en entier. Coché : plusieurs personnes peuvent réserver des lits sur les mêmes dates.
+                        </div>
+                    </div>
+                    @if (_studioFormPerBed)
+                    {
+                        <div class="field">
+                            <label for="studio-beds">Nombre de lits</label>
+                            <input id="studio-beds" type="number" min="1" max="@_studioFormCapacity" @bind="_studioFormNumberOfBeds" />
+                            <div class="field-hint">Peut être inférieur à la capacité (ex. un lit double compte pour 1 lit / 2 personnes).</div>
+                        </div>
+                    }
                 </div>
                 <div class="modal-actions">
                     <button class="btn" @onclick="CloseStudioModal">Annuler</button>
@@ -629,6 +659,8 @@
     private bool _studioFormHasKitchen;
     private bool _studioFormRentableAlone;
     private bool _studioFormUnavailable;
+    private bool _studioFormPerBed;
+    private int _studioFormNumberOfBeds = 1;
     private bool _savingStudio;
     private string? _studioModalError;
 
@@ -716,6 +748,8 @@
         _studioFormHasKitchen = false;
         _studioFormRentableAlone = true;
         _studioFormUnavailable = false;
+        _studioFormPerBed = false;
+        _studioFormNumberOfBeds = 1;
         _studioModalError = null;
         _showStudioModal = true;
     }
@@ -728,6 +762,8 @@
         _studioFormHasKitchen = studio.HasKitchen;
         _studioFormRentableAlone = studio.RentableAlone;
         _studioFormUnavailable = studio.Unavailable;
+        _studioFormPerBed = studio.RentalMode == RentalMode.PerBed;
+        _studioFormNumberOfBeds = studio.NumberOfBeds > 0 ? studio.NumberOfBeds : 1;
         _studioModalError = null;
         _showStudioModal = true;
     }
@@ -741,12 +777,16 @@
 
         try
         {
+            var rentalMode = _studioFormPerBed ? RentalMode.PerBed : RentalMode.PerLodging;
+            var numberOfBeds = _studioFormPerBed ? _studioFormNumberOfBeds : 0;
+
             if (_editingStudioId is null)
             {
                 await Mediator.Send(
                     new EcbatanLocation.Application.Commands.CreateStudio.CreateStudioCommand(
                         _studioFormName, _studioFormCapacity,
-                        _studioFormHasKitchen, _studioFormRentableAlone, _studioFormUnavailable));
+                        _studioFormHasKitchen, _studioFormRentableAlone, _studioFormUnavailable,
+                        rentalMode, numberOfBeds));
 
                 _showStudioModal = false;
                 _studiosSuccess = $"Studio « {_studioFormName} » créé.";
@@ -756,7 +796,8 @@
                 await Mediator.Send(
                     new EcbatanLocation.Application.Commands.UpdateStudio.UpdateStudioCommand(
                         _editingStudioId.Value, _studioFormName, _studioFormCapacity,
-                        _studioFormHasKitchen, _studioFormRentableAlone, _studioFormUnavailable));
+                        _studioFormHasKitchen, _studioFormRentableAlone, _studioFormUnavailable,
+                        rentalMode, numberOfBeds));
 
                 _showStudioModal = false;
                 _studiosSuccess = $"Studio « {_studioFormName} » modifié.";

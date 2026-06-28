@@ -1,6 +1,7 @@
-<div class="booking @GetStatusClass()" @onclick="OnClick"
+<div class="booking @GetStatusClass() @(Reservation.IsHypothetical ? "hypothetical" : "")" @onclick="OnClick"
      role="button" tabindex="0" @onkeydown="OnKeyDown"
-     aria-label="@($"Réservation {Reservation.TenantName}, {Reservation.OwnerName}, statut {GetStatusLabel()}")">
+     title="@(Reservation.IsHypothetical ? "Réservation hypothétique" : null)"
+     aria-label="@($"Réservation {Reservation.TenantName}, {Reservation.OwnerName}, statut {GetStatusLabel()}{(Reservation.IsHypothetical ? ", hypothétique" : "")}")">
     <div class="who">@Reservation.TenantName</div>
     <div class="owner">@Reservation.OwnerName</div>
     <div class="sub">

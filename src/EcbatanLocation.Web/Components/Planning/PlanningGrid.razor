@@ -17,16 +17,16 @@
                 var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
                 var dayNum = d;
                 var occ = GetOccupation(date);
-                <th class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(IsInRange(date) ? "in-range" : "")">
-                    <span class="day-header @(isToday ? "today" : "") @(isWeekend ? "weekend" : "")"
-                          @onclick="() => OnDayClicked(date)">
+                <th class="day-col day-col-head @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(IsInRange(date) ? "in-range" : "")"
+                    @onclick="() => OnDayClicked(date)"
+                    title="@(occ is not null ? $"{occ.AvailablePlaces} places libres sur {occ.TotalCapacity}" : null)">
+                    <span class="day-header @(isToday ? "today" : "") @(isWeekend ? "weekend" : "")">
                         @dayNum
                     </span>
                     @if (occ is not null)
                     {
                         <span class="day-occ"
-                              style="background:@OccupancyPalette.Color(occ)"
-                              title="@($"{occ.AvailablePlaces} places libres sur {occ.TotalCapacity}")"></span>
+                              style="background:@OccupancyPalette.Color(occ)"></span>
                     }
                 </th>
             }
@@ -35,65 +35,76 @@
     <tbody>
         @foreach (var studioPlan in Planning.Studios)
         {
-            var spans = BuildSpans(studioPlan.Reservations, monthStart, monthEnd, daysInMonth);
+            var lanes = BuildLanes(studioPlan);
+            for (int laneIdx = 0; laneIdx < lanes.Count; laneIdx++)
+            {
+                var lane = lanes[laneIdx];
+                var spans = BuildSpans(lane, monthStart, monthEnd, daysInMonth);
 
-            <tr>
-                <td class="studio-col @(studioPlan.Studio.Unavailable ? "studio-unavailable" : "")">
-                    <div class="studio-name">
-                        @studioPlan.Studio.Name
-                        @if (studioPlan.Studio.Unavailable)
-                        {
-                            <span class="badge st-pending" style="margin-left:.4rem;font-size:.7rem">Indisponible</span>
-                        }
-                    </div>
-                    <div class="studio-meta">
-                        @if (studioPlan.Studio.HasKitchen) { <span>Cuisine</span> }
-                        else { <span>Sans cuisine</span> }
-                        &bull; @studioPlan.Studio.Capacity pl.
-                        @if (!studioPlan.Studio.RentableAlone) { <span>&bull; <b>Non louable seul</b></span> }
-                    </div>
-                </td>
-                @for (int d = 1; d <= daysInMonth; d++)
-                {
-                    var date = new DateOnly(Year, Month, d);
-                    var isToday = date == today;
-                    var isSelected = date == SelectedDate;
-
-                    var inRange = IsInRange(date);
-                    var span = spans.FirstOrDefault(s => s.StartDay == d);
-                    if (span is not null)
+                <tr>
+                    @if (laneIdx == 0)
                     {
-                        var res = span.Reservation;
-                        var startsBeforeMonth = res.StartDate < monthStart;
-                        var endsAfterMonth = res.EndDate > monthEnd.AddDays(1);
-                        var roundLeft = !startsBeforeMonth;
-                        var roundRight = !endsAfterMonth;
-
-                        <td colspan="@span.ColSpan"
-                            class="day-col bar-cell @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(inRange ? "in-range" : "")"
-                            @onclick="() => OnReservationClick(res.Id)">
-                            <div class="booking-span @GetStatusClass(res.Status) @(roundLeft ? "round-left" : "") @(roundRight ? "round-right" : "")"
-                                 role="button" tabindex="0"
-                                 @onkeydown="@(e => OnReservationKeyDown(e, res.Id))"
-                                 aria-label="@($"Réservation {res.TenantName}, {res.OwnerName}")">
-                                <span class="span-name">@res.TenantName</span>
-                                <span class="span-owner">@res.OwnerName</span>
-                                <span class="span-count">@res.PersonLines.Sum(l => l.AdultCount) ad.@(res.PersonLines.Sum(l => l.ChildrenUnder3Count) > 0 ? $" +{res.PersonLines.Sum(l => l.ChildrenUnder3Count)}" : "")</span>
-                                @if (res.LinkGroupIndex >= 0)
+                        <td class="studio-col @(studioPlan.Studio.Unavailable ? "studio-unavailable" : "")"
+                            rowspan="@lanes.Count">
+                            <div class="studio-name">
+                                @studioPlan.Studio.Name
+                                @if (studioPlan.Studio.Unavailable)
                                 {
-                                    <span class="link-dot" style="background:@LinkColors[res.LinkGroupIndex % LinkColors.Length]"></span>
+                                    <span class="badge st-pending" style="margin-left:.4rem;font-size:.7rem">Indisponible</span>
                                 }
+                            </div>
+                            <div class="studio-meta">
+                                @if (studioPlan.Studio.HasKitchen) { <span>Cuisine</span> }
+                                else { <span>Sans cuisine</span> }
+                                &bull; @studioPlan.Studio.Capacity pl.
+                                @if (studioPlan.Studio.RentalMode == RentalMode.PerBed) { <span>&bull; <b>@studioPlan.Studio.NumberOfBeds lits</b></span> }
+                                @if (!studioPlan.Studio.RentableAlone) { <span>&bull; <b>Non louable seul</b></span> }
                             </div>
                         </td>
                     }
-                    else if (!spans.Any(s => d > s.StartDay && d < s.StartDay + s.ColSpan))
+                    @for (int d = 1; d <= daysInMonth; d++)
                     {
-                        <td class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(inRange ? "in-range" : "")"
-                            @onclick="() => OnDayClicked(date)">
-                        </td>
+                        var date = new DateOnly(Year, Month, d);
+                        var isToday = date == today;
+                        var isSelected = date == SelectedDate;
+
+                        var inRange = IsInRange(date);
+                        var span = spans.FirstOrDefault(s => s.StartDay == d);
+                        if (span is not null)
+                        {
+                            var res = span.Reservation;
+                            var startsBeforeMonth = res.StartDate < monthStart;
+                            var endsAfterMonth = res.EndDate > monthEnd.AddDays(1);
+                            var roundLeft = !startsBeforeMonth;
+                            var roundRight = !endsAfterMonth;
+
+                            <td colspan="@span.ColSpan"
+                                class="day-col bar-cell @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(inRange ? "in-range" : "")"
+                                @onclick="() => OnReservationClick(res.Id)">
+                                <div class="booking-span @GetStatusClass(res.Status) @(roundLeft ? "round-left" : "") @(roundRight ? "round-right" : "") @(res.IsHypothetical ? "hypothetical" : "")"
+                                     role="button" tabindex="0"
+                                     @onkeydown="@(e => OnReservationKeyDown(e, res.Id))"
+                                     title="@(res.IsHypothetical ? "Réservation hypothétique" : null)"
+                                     aria-label="@($"Réservation {res.TenantName}, {res.OwnerName}{(res.IsHypothetical ? ", hypothétique" : "")}")">
+                                    <span class="span-name">@res.TenantName</span>
+                                    <span class="span-owner">@res.OwnerName</span>
+                                    <span class="span-count">@res.PersonLines.Sum(l => l.AdultCount) ad.@(res.PersonLines.Sum(l => l.ChildrenUnder3Count) > 0 ? $" +{res.PersonLines.Sum(l => l.ChildrenUnder3Count)}" : "")@(res.BedCount > 0 ? $" · {res.BedCount} lit{(res.BedCount > 1 ? "s" : "")}" : "")</span>
+                                    @if (res.LinkGroupIndex >= 0)
+                                    {
+                                        <span class="link-dot" style="background:@LinkColors[res.LinkGroupIndex % LinkColors.Length]"></span>
+                                    }
+                                </div>
+                            </td>
+                        }
+                        else if (!spans.Any(s => d > s.StartDay && d < s.StartDay + s.ColSpan))
+                        {
+                            <td class="day-col @(isToday ? "today" : "") @(isSelected ? "selected" : "") @(inRange ? "in-range" : "")"
+                                @onclick="() => OnDayClicked(date)">
+                            </td>
+                        }
                     }
-                }
-            </tr>
+                </tr>
+            }
         }
     </tbody>
 </table>
@@ -132,6 +143,51 @@
     }
 
     private record SpanInfo(int StartDay, int ColSpan, ReservationPlanningDto Reservation);
+
+    /// <summary>
+    /// Packs overlapping reservations into stacked lanes (greedy interval partitioning) so concurrent
+    /// bookings render as stacked bars. This covers per-bed studios (several beds at once) and
+    /// hypothetical reservations staked over an already-taken whole-lodging slot. Real reservations
+    /// fill the upper lanes first; hypotheticals are pushed to the lanes below. Studios with 0 or 1
+    /// reservation, and whole-lodging studios with no overlap, naturally collapse to a single lane.
+    /// </summary>
+    private static List<List<ReservationPlanningDto>> BuildLanes(StudioPlanningDto studioPlan)
+    {
+        var reservations = studioPlan.Reservations;
+
+        if (reservations.Count <= 1)
+            return [reservations.ToList()];
+
+        var lanes = new List<List<ReservationPlanningDto>>();
+        var laneEnd = new List<DateOnly>();
+
+        foreach (var res in reservations
+            .OrderBy(r => r.IsHypothetical)
+            .ThenBy(r => r.StartDate)
+            .ThenBy(r => r.EndDate))
+        {
+            var placed = false;
+            for (int i = 0; i < lanes.Count; i++)
+            {
+                // Departure day is exclusive: a lane is reusable once its last booking ends on/before this start.
+                if (laneEnd[i] <= res.StartDate)
+                {
+                    lanes[i].Add(res);
+                    laneEnd[i] = res.EndDate;
+                    placed = true;
+                    break;
+                }
+            }
+
+            if (!placed)
+            {
+                lanes.Add([res]);
+                laneEnd.Add(res.EndDate);
+            }
+        }
+
+        return lanes;
+    }
 
     private List<SpanInfo> BuildSpans(
         IReadOnlyList<ReservationPlanningDto> reservations,

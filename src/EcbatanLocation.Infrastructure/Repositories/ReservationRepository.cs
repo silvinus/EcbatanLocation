@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using EcbatanLocation.Domain.Entities;
+using EcbatanLocation.Domain.Enums;
 using EcbatanLocation.Domain.Exceptions;
 using EcbatanLocation.Domain.Repositories;
 using EcbatanLocation.Domain.ValueObjects;
@@ -28,14 +29,64 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
         Guid? excludeReservationId = null,
         CancellationToken ct = default)
     {
+        // Hypothetical reservations never occupy a slot, so they are invisible to availability checks.
         var query = context.Reservations
-            .Where(r => r.StudioId == studioId)
+            .Where(r => r.StudioId == studioId && !r.IsHypothetical)
             .Where(r => r.Dates.StartDate < dates.EndDate && r.Dates.EndDate > dates.StartDate);
 
         if (excludeReservationId.HasValue)
             query = query.Where(r => r.Id != excludeReservationId.Value);
 
         return await query.AnyAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Reservation>> GetOverlappingByStudioAsync(
+        Guid studioId,
+        DateRange dates,
+        Guid? excludeReservationId = null,
+        CancellationToken ct = default)
+    {
+        // Hypothetical reservations never occupy a slot, so they are excluded from availability counts.
+        var query = context.Reservations
+            .Where(r => r.StudioId == studioId && !r.IsHypothetical)
+            .Where(r => r.Dates.StartDate < dates.EndDate && r.Dates.EndDate > dates.StartDate);
+
+        if (excludeReservationId.HasValue)
+            query = query.Where(r => r.Id != excludeReservationId.Value);
+
+        return await query.ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<Reservation>> GetHypotheticalsByStudioAsync(
+        Guid studioId,
+        DateRange dates,
+        CancellationToken ct = default)
+    {
+        return await context.Reservations
+            .Where(r => r.StudioId == studioId && r.IsHypothetical)
+            .Where(r => r.Dates.StartDate < dates.EndDate && r.Dates.EndDate > dates.StartDate)
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// One-shot data fix: gives a bed count to reservations on a per-bed studio whose
+    /// <c>BedCount</c> is still 0 (they were created while the studio was whole-lodging).
+    /// Each gets its adult count, clamped to the studio's beds (at least one).
+    /// </summary>
+    public async Task<int> BackfillBedCountForStudioAsync(Guid studioId, int numberOfBeds, CancellationToken ct = default)
+    {
+        var reservations = await context.Reservations
+            .Where(r => r.StudioId == studioId && r.BedCount == 0)
+            .ToListAsync(ct);
+
+        if (reservations.Count == 0)
+            return 0;
+
+        foreach (var reservation in reservations)
+            reservation.BackfillBedCount(Math.Min(Math.Max(1, reservation.TotalAdultCount), numberOfBeds));
+
+        await context.SaveChangesAsync(ct);
+        return reservations.Count;
     }
 
     public async Task AddAsync(Reservation reservation, CancellationToken ct = default)
@@ -53,19 +104,65 @@ public class ReservationRepository(EcbatanLocationDbContext context) : IReservat
     }
 
     /// <summary>
-    /// Authoritative overlap check performed inside the write transaction, closing the
+    /// Authoritative availability check performed inside the write transaction, closing the
     /// time-of-check/time-of-use race between the UI pre-check and persistence.
-    /// The unique index on (StudioId, StartDate, EndDate) is the final database-level backstop.
+    /// For a whole-lodging studio it forbids any overlap; for a per-bed studio it enforces
+    /// that reserved beds and people stay within the studio's beds and capacity.
     /// </summary>
     private async Task GuardNoOverlapAsync(Reservation reservation, CancellationToken ct)
     {
-        var overlap = await context.Reservations
-            .Where(r => r.StudioId == reservation.StudioId && r.Id != reservation.Id)
-            .AnyAsync(
-                r => r.Dates.StartDate < reservation.Dates.EndDate && r.Dates.EndDate > reservation.Dates.StartDate,
-                ct);
+        // A reservation being deleted vacates its slot, so availability rules don't apply to it.
+        // (Without this, deleting a hypothetical staked over a since-confirmed booking would be
+        // wrongly rejected by the confirmed-overlap check below.)
+        if (reservation.Status == ReservationStatus.Deleted)
+            return;
 
-        if (overlap)
+        var studio = await context.Studios.FindAsync([reservation.StudioId], ct);
+
+        // Hypothetical reservations never occupy a slot, so they are excluded from the guard's counts.
+        var overlapping = await context.Reservations
+            .Where(r => r.StudioId == reservation.StudioId && r.Id != reservation.Id && !r.IsHypothetical)
+            .Where(r => r.Dates.StartDate < reservation.Dates.EndDate && r.Dates.EndDate > reservation.Dates.StartDate)
+            .ToListAsync(ct);
+
+        // A hypothetical is deliberately allowed to overlap not-yet-confirmed bookings, but it may
+        // never be staked over a confirmed reservation: it must still fit alongside the confirmed
+        // overlaps alone (authoritative re-check closing the TOCTOU race with the UI pre-check).
+        if (reservation.IsHypothetical)
+        {
+            var confirmed = overlapping.Where(r => r.Status == ReservationStatus.Confirmed).ToList();
+            if (studio is not null && studio.IsPerBed)
+            {
+                var confirmedBeds = confirmed.Sum(r => r.BedCount);
+                var confirmedAdults = confirmed.Sum(r => r.TotalAdultCount);
+                if (confirmedBeds + reservation.BedCount > studio.NumberOfBeds
+                    || confirmedAdults + reservation.TotalAdultCount > studio.Capacity)
+                    throw new ConfirmedReservationConflictException();
+            }
+            else if (confirmed.Count > 0)
+            {
+                throw new ConfirmedReservationConflictException();
+            }
+
+            return;
+        }
+
+        if (studio is not null && studio.IsPerBed)
+        {
+            var usedBeds = overlapping.Sum(r => r.BedCount);
+            if (usedBeds + reservation.BedCount > studio.NumberOfBeds)
+                throw new NoBedsAvailableException(
+                    $"Only {studio.NumberOfBeds - usedBeds} bed(s) left for these dates, {reservation.BedCount} requested.");
+
+            var usedAdults = overlapping.Sum(r => r.TotalAdultCount);
+            if (usedAdults + reservation.TotalAdultCount > studio.Capacity)
+                throw new NoBedsAvailableException(
+                    $"Capacity exceeded: {usedAdults + reservation.TotalAdultCount} people for a capacity of {studio.Capacity}.");
+
+            return;
+        }
+
+        if (overlapping.Count > 0)
             throw new OverlappingReservationException();
     }
 

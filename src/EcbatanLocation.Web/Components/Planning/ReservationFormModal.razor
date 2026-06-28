@@ -13,10 +13,29 @@
                 <div class="alert-error">@_errorMessage</div>
             }
 
-            @if (_overlapWarning)
+            @if (_overlapWarning && !_isHypothetical)
             {
                 <div class="alert-error">
-                    ⚠ Ce studio est déjà réservé sur ces dates. Veuillez choisir un autre créneau.
+                    @if (IsPerBedStudio)
+                    {
+                        <span>⚠ Plus assez de lits disponibles sur ces dates (@_availableBeds lit(s) / @_availableCapacity place(s) restant(s)).</span>
+                    }
+                    else
+                    {
+                        <span>⚠ Ce studio est déjà réservé sur ces dates. Veuillez choisir un autre créneau.</span>
+                    }
+                </div>
+            }
+            else if (_isHypothetical && HypotheticalBlocked)
+            {
+                <div class="alert-error">
+                    ⚠ Impossible de poser une réservation hypothétique sur ce créneau : il est déjà occupé par une réservation confirmée. Une hypothétique ne peut être posée que sur une demande ou une acceptation non confirmée.
+                </div>
+            }
+            else if (_overlapWarning && _isHypothetical)
+            {
+                <div class="alert-info">
+                    ℹ Réservation hypothétique : posée sur un créneau déjà occupé. Elle restera en « Demande » tant qu'elle ne sera pas promue.
                 </div>
             }
 
@@ -35,6 +54,20 @@
                         <div class="field-hint warn">Ce studio ne peut être loué qu'avec un studio indépendant sur les mêmes dates.</div>
                     }
                 </div>
+
+                @if (IsAdmin && !IsEdit)
+                {
+                    <div class="field">
+                        <label>Propriétaire</label>
+                        <select value="@_selectedOwnerId" @onchange="OnOwnerChanged">
+                            @foreach (var o in Owners)
+                            {
+                                <option value="@o.Id">@o.Name</option>
+                            }
+                        </select>
+                        <div class="field-hint">En tant qu'administrateur, vous créez cette réservation au nom de ce propriétaire.</div>
+                    </div>
+                }
 
                 <div class="row">
                     <div class="field">
@@ -56,6 +89,46 @@
                 @if (_startDate >= _endDate)
                 {
                     <div class="field-hint warn">La date de départ doit être après la date d'arrivée.</div>
+                }
+
+                <div class="field">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" checked="@_isHypothetical" @onchange="OnHypotheticalChanged" />
+                        Réservation hypothétique
+                    </label>
+                    <div class="field-hint">
+                        Permet de poser une réservation sur un créneau déjà pris par une demande ou une acceptation non confirmée.
+                        Elle reste en « Demande » (ni acceptable ni confirmable) jusqu'à sa promotion.
+                    </div>
+                </div>
+
+                @if (NeedsBedInput)
+                {
+                    <div class="field">
+                        <label>Nombre de lits réservés</label>
+                        <input type="number" min="1" max="@_selectedStudio!.NumberOfBeds" value="@_bedCount"
+                               @onchange="OnBedCountChanged" />
+                        <div class="field-hint">
+                            @if (_availability is not null)
+                            {
+                                <span>@_availableBeds lit(s) libre(s) sur @_selectedStudio.NumberOfBeds — @_availableCapacity place(s) restante(s) sur ces dates.</span>
+                            }
+                            else
+                            {
+                                <span>Ce logement se loue au lit : @_selectedStudio.NumberOfBeds lit(s) au total.</span>
+                            }
+                        </div>
+                    </div>
+                }
+                else if (IsPerBedStudio)
+                {
+                    <div class="field-hint">
+                        Logement loué au lit (1 lit par personne).
+                        @if (_availability is not null)
+                        {
+                            <span>@_availableBeds lit(s) libre(s) sur @_selectedStudio!.NumberOfBeds sur ces dates.</span>
+                        }
+                    </div>
                 }
 
                 @if (_selectedStudio is not null && !_selectedStudio.RentableAlone)
@@ -92,6 +165,15 @@
                 <div class="field">
                     <label>Personnes</label>
                     <div class="person-lines">
+                        <div class="person-line-row person-line-head">
+                            <div style="flex:2"></div>
+                            <div style="flex:1" class="col-head">Adultes</div>
+                            <div style="flex:1" class="col-head">Enfants &lt;3 ans</div>
+                            @if (_personLines.Count > 1)
+                            {
+                                <span class="head-spacer"></span>
+                            }
+                        </div>
                         @for (int i = 0; i < _personLines.Count; i++)
                         {
                             var index = i;
@@ -125,10 +207,6 @@
                     <button class="btn" style="margin-top:6px;font-size:12px;padding:6px 10px" @onclick="AddLine">+ Ajouter un type</button>
                 </div>
 
-                <div class="hint">
-                    <span style="margin-right:12px">Adultes</span> <span style="margin-right:12px">Enfants &lt;3 ans</span>
-                </div>
-
                 @if (_selectedStudio is not null && TotalPersons > _selectedStudio.Capacity)
                 {
                     <div class="field-hint warn">
@@ -152,7 +230,7 @@
 
             <div class="modal-actions">
                 <button class="btn" @onclick="OnCancel">Annuler</button>
-                <button class="btn primary" @onclick="Save" disabled="@(_saving || _overlapWarning)">
+                <button class="btn primary" @onclick="Save" disabled="@(_saving || BlocksSave)">
                     @(_saving ? "Enregistrement..." : "Enregistrer")
                 </button>
             </div>
@@ -163,6 +241,8 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<StudioDto> Studios { get; set; } = [];
     [Parameter, EditorRequired] public Guid CurrentOwnerId { get; set; }
+    [Parameter] public IReadOnlyList<OwnerDto> Owners { get; set; } = [];
+    [Parameter] public bool IsAdmin { get; set; }
     [Parameter] public ReservationDetailDto? EditReservation { get; set; }
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
@@ -179,7 +259,46 @@
     private bool _saving;
     private bool _overlapWarning;
     private bool _checkingOverlap;
+    private bool _isHypothetical;
+    private int _bedCount = 1;
+
+    // Owner the reservation is created for. A regular owner only ever creates for themselves
+    // (CurrentOwnerId); an admin — who has no owner record of their own — picks the owner explicitly.
+    private Guid _selectedOwnerId;
+
+    // A hypothetical reservation is deliberately allowed to overlap not-yet-confirmed bookings, so
+    // availability does not block saving — except when the slot is held by a confirmed reservation,
+    // over which a hypothetical may not be staked.
+    private bool BlocksSave => (_overlapWarning && !_isHypothetical) || (_isHypothetical && HypotheticalBlocked);
+
+    // True when ticking "hypothetical" would still collide with a confirmed reservation, which the
+    // backend rejects. For a per-bed studio it must fit within what the confirmed bookings leave free.
+    private bool HypotheticalBlocked
+    {
+        get
+        {
+            if (_availability is null)
+                return false;
+
+            return _availability.IsPerBed
+                ? RequestedBeds > _availability.AvailableBedsOverConfirmed
+                  || _personLines.Sum(l => l.AdultCount) > _availability.AvailableCapacityOverConfirmed
+                : _availability.HasConfirmedConflict;
+        }
+    }
+    private EcbatanLocation.Application.Queries.CheckOverlap.OverlapCheckResult? _availability;
+    private int _availableBeds;
+    private int _availableCapacity;
     private StudioDto? _selectedStudio;
+
+    private bool IsPerBedStudio => _selectedStudio?.RentalMode == RentalMode.PerBed;
+
+    // Only ask for a bed count when beds are scarcer than capacity (e.g. a double bed for two).
+    // When every bed holds one person (capacity == beds), beds are taken from the people count.
+    private bool NeedsBedInput => IsPerBedStudio && _selectedStudio!.Capacity != _selectedStudio.NumberOfBeds;
+    private int RequestedBeds => IsPerBedStudio
+        ? (NeedsBedInput ? _bedCount : _personLines.Sum(l => l.AdultCount))
+        : 1;
     private List<ClientType> _allowedClientTypes = [ClientType.Owner, ClientType.GuestWithPresence, ClientType.Acquaintance];
 
     private Guid? _parentReservationId;
@@ -198,6 +317,21 @@
         public int ChildrenCount { get; set; } = childrenCount;
     }
 
+    protected override void OnInitialized()
+    {
+        // Default the owner to the signed-in owner; for an admin without an owner record, fall back
+        // to the first owner so the selector always has a valid value.
+        _selectedOwnerId = CurrentOwnerId != Guid.Empty
+            ? CurrentOwnerId
+            : Owners.FirstOrDefault()?.Id ?? Guid.Empty;
+    }
+
+    private void OnOwnerChanged(ChangeEventArgs e)
+    {
+        if (Guid.TryParse(e.Value?.ToString(), out var id))
+            _selectedOwnerId = id;
+    }
+
     protected override void OnParametersSet()
     {
         if (EditReservation is not null)
@@ -212,6 +346,8 @@
             _estimatedAmount = EditReservation.EstimatedAmount;
             _selectedStudio = Studios.FirstOrDefault(s => s.Id == EditReservation.Studio.Id);
             _parentReservationId = EditReservation.ParentReservationId;
+            _bedCount = EditReservation.BedCount > 0 ? EditReservation.BedCount : 1;
+            _isHypothetical = EditReservation.IsHypothetical;
             UpdateAllowedClientTypes();
         }
     }
@@ -273,6 +409,8 @@
             : null;
         _parentReservationId = null;
         _compatibleParents = [];
+        _bedCount = 1;
+        _availability = null;
         UpdateAllowedClientTypes();
         await RefreshEstimateAndOverlap();
         if (_selectedStudio is not null && !_selectedStudio.RentableAlone)
@@ -338,7 +476,41 @@
     {
         if (int.TryParse(e.Value?.ToString(), out var n))
             _personLines[index].AdultCount = Math.Max(0, n);
+        RecomputeConflict();
         await EstimateAmount();
+    }
+
+    private void OnBedCountChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var n))
+            _bedCount = Math.Max(1, n);
+        RecomputeConflict();
+    }
+
+    private void OnHypotheticalChanged(ChangeEventArgs e)
+    {
+        _isHypothetical = e.Value is bool b && b;
+    }
+
+    private void RecomputeConflict()
+    {
+        if (_availability is null)
+        {
+            _overlapWarning = false;
+            return;
+        }
+
+        if (_availability.IsPerBed)
+        {
+            _availableBeds = _availability.AvailableBeds;
+            _availableCapacity = _availability.AvailableCapacity;
+            _overlapWarning = RequestedBeds > _availableBeds
+                              || _personLines.Sum(l => l.AdultCount) > _availableCapacity;
+        }
+        else
+        {
+            _overlapWarning = _availability.HasConflict;
+        }
     }
 
     private async Task OnLineChildrenChanged(int index, ChangeEventArgs e)
@@ -399,6 +571,7 @@
         if (!Guid.TryParse(_studioId, out var studioId) || studioId == Guid.Empty
             || _startDate >= _endDate)
         {
+            _availability = null;
             _overlapWarning = false;
             return;
         }
@@ -410,17 +583,18 @@
         {
             await Task.Delay(300, token);
 
-            var hasOverlap = await Mediator.Send(
+            _availability = await Mediator.Send(
                 new EcbatanLocation.Application.Queries.CheckOverlap.CheckOverlapQuery(
                     studioId, _startDate, _endDate,
                     IsEdit ? EditReservation!.Id : null),
                 token);
 
-            _overlapWarning = hasOverlap;
+            RecomputeConflict();
         }
         catch (OperationCanceledException) { }
         catch
         {
+            _availability = null;
             _overlapWarning = false;
         }
         finally
@@ -460,7 +634,7 @@
                 return;
             }
 
-            if (_overlapWarning)
+            if (BlocksSave)
             {
                 _errorMessage = "Impossible d'enregistrer : le studio est déjà réservé sur ces dates.";
                 return;
@@ -472,22 +646,30 @@
                 return;
             }
 
+            if (!IsEdit && _selectedOwnerId == Guid.Empty)
+            {
+                _errorMessage = "Veuillez sélectionner un propriétaire.";
+                return;
+            }
+
             var personLineDtos = _personLines
                 .Where(l => l.AdultCount > 0 || l.ChildrenCount > 0)
                 .Select(l => new PersonLineDto(l.ClientType, l.AdultCount, l.ChildrenCount))
                 .ToList();
 
+            var bedCount = RequestedBeds;
+
             if (IsEdit)
             {
                 await Mediator.Send(new EcbatanLocation.Application.Commands.UpdateReservation.UpdateReservationCommand(
                     EditReservation!.Id, studioId, _startDate, _endDate,
-                    _tenantName.Trim(), personLineDtos, _parentReservationId));
+                    _tenantName.Trim(), personLineDtos, _parentReservationId, bedCount, _isHypothetical));
             }
             else
             {
                 await Mediator.Send(new EcbatanLocation.Application.Commands.CreateReservation.CreateReservationCommand(
-                    studioId, CurrentOwnerId, _startDate, _endDate,
-                    _tenantName.Trim(), personLineDtos, _parentReservationId));
+                    studioId, _selectedOwnerId, _startDate, _endDate,
+                    _tenantName.Trim(), personLineDtos, _parentReservationId, bedCount, _isHypothetical));
             }
 
             await OnSaved.InvokeAsync();

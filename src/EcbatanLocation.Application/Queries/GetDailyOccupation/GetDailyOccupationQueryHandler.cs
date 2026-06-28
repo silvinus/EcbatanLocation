@@ -5,8 +5,9 @@ using EcbatanLocation.Domain.Repositories;
 
 namespace EcbatanLocation.Application.Queries.GetDailyOccupation;
 
-// H2: Occupied places = max capacity of studios with at least one Accepted or Confirmed reservation.
-// A studio is counted as a whole (free or occupied).
+// H2: Occupied places = occupancy units of studios with at least one Accepted or Confirmed
+// reservation. A whole-lodging studio counts as a single block (its full capacity); a per-bed
+// studio counts the number of occupied beds out of its bed count.
 public class GetDailyOccupationQueryHandler(
     IReservationRepository reservationRepository,
     IStudioRepository studioRepository) : IRequestHandler<GetDailyOccupationQuery, DailyOccupationDto>
@@ -17,21 +18,32 @@ public class GetDailyOccupationQueryHandler(
         var studios = allStudios.Where(s => !s.Unavailable).ToList();
         var reservations = await reservationRepository.GetByDateAsync(request.Date, cancellationToken);
 
-        var occupiedStudioIds = reservations
+        var activeByStudio = reservations
             .Where(r => r.Status is ReservationStatus.Accepted or ReservationStatus.Confirmed)
-            .Select(r => r.StudioId)
-            .Distinct()
-            .ToHashSet();
+            .GroupBy(r => r.StudioId)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
-        var totalCapacity = studios.Sum(s => s.Capacity);
-        var occupiedPlaces = studios.Where(s => occupiedStudioIds.Contains(s.Id)).Sum(s => s.Capacity);
+        var totalCapacity = studios.Sum(s => s.OccupancyCapacity);
+
+        var occupiedPlaces = 0;
+        var occupiedStudios = 0;
+        foreach (var studio in studios)
+        {
+            if (!activeByStudio.TryGetValue(studio.Id, out var active))
+                continue;
+
+            occupiedStudios++;
+            occupiedPlaces += studio.IsPerBed
+                ? Math.Min(active.Sum(r => r.BedCount), studio.NumberOfBeds)
+                : studio.Capacity;
+        }
 
         return new DailyOccupationDto(
             request.Date,
             totalCapacity,
             occupiedPlaces,
             totalCapacity - occupiedPlaces,
-            occupiedStudioIds.Count(id => studios.Any(s => s.Id == id)),
+            occupiedStudios,
             studios.Count);
     }
 }

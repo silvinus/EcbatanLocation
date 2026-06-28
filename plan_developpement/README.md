@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Le développement est découpé en **20 phases** progressives, chaque phase livrant un incrément fonctionnel testable.
+Le développement est découpé en **21 phases** progressives, chaque phase livrant un incrément fonctionnel testable.
 
 ## Résumé des phases
 
@@ -28,6 +28,7 @@ Le développement est découpé en **20 phases** progressives, chaque phase livr
 | **18** | **Durcissement authentification** | **À faire** |
 | **19** | **Lien explicite parent-enfant entre réservations** | **✅ Livrée** |
 | **20** | **Unit of Work transactionnel & dispatch critique des domain events** | **À faire** |
+| **21** | **Location au lit (per-bed) pour certains logements** | **✅ Livrée** |
 
 ## Fichiers
 
@@ -51,6 +52,7 @@ Le développement est découpé en **20 phases** progressives, chaque phase livr
 - [Phase 18 — Durcissement authentification](phase-18.md)
 - [Phase 19 — Lien explicite parent-enfant entre réservations](phase-19.md)
 - [Phase 20 — Unit of Work transactionnel & dispatch critique des domain events](phase-20.md)
+- [Phase 21 — Location au lit (per-bed) pour certains logements](phase-21.md)
 
 ## Dépendances NuGet prévues
 
