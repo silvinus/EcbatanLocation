@@ -1,0 +1,66 @@
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+<section class="news-banner @(_collapsed ? "collapsed" : "")">
+    <button class="news-header" @onclick="Toggle" aria-expanded="@(!_collapsed)">
+        <span class="news-title">✨ Nouveautés</span>
+        <span class="news-version">v@(ReleaseNotes.All[0].Version)</span>
+        <span class="news-caret">@(_collapsed ? "▾" : "▴")</span>
+    </button>
+
+    @if (!_collapsed)
+    {
+        <div class="news-body">
+            @foreach (var release in ReleaseNotes.All)
+            {
+                <div class="news-release">
+                    <div class="news-release-head">
+                        <span class="news-release-version">v@(release.Version)</span>
+                        <span class="news-release-date">@release.Date</span>
+                    </div>
+                    <ul class="news-items">
+                        @foreach (var item in release.Items)
+                        {
+                            <li>@item</li>
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+@code {
+    private bool _collapsed = true;
+    private bool _initialized;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            _initialized = true;
+            try
+            {
+                _collapsed = await JS.InvokeAsync<bool>("newsInterop.isCollapsed");
+            }
+            catch
+            {
+                // SSR / prerendering — keep default (collapsed)
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task Toggle()
+    {
+        _collapsed = !_collapsed;
+        try
+        {
+            await JS.InvokeVoidAsync("newsInterop.setCollapsed", _collapsed);
+        }
+        catch
+        {
+            // ignore persistence failures
+        }
+    }
+}
