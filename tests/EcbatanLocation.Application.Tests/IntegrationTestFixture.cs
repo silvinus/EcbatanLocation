@@ -59,6 +59,8 @@ public class IntegrationTestFixture : IAsyncLifetime
 
     public IServiceScope CreateScope() => _factory.Services.CreateScope();
 
+    public HttpClient CreateClient() => _factory.CreateClient();
+
     public async Task DisposeAsync()
     {
         _scope.Dispose();

@@ -11,6 +11,7 @@ using EcbatanLocation.Infrastructure.Persistence;
 using EcbatanLocation.Web.Behaviors;
 using EcbatanLocation.Web.Components;
 using EcbatanLocation.Web.Components.Account;
+using EcbatanLocation.Web.Endpoints;
 using EcbatanLocation.Web.Services;
 using Microsoft.AspNetCore.HttpOverrides;
 
@@ -119,6 +120,8 @@ app.MapGet("/api/report/pdf", async (
         : $"rapport-reservations-{year}.pdf";
     return Results.File(pdf, "application/pdf", filename);
 }).RequireAuthorization(policy => policy.RequireRole("Admin")).RequireRateLimiting("fixed");
+
+app.MapPlanningApi();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
